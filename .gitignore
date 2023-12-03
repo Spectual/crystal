@@ -1,4 +1,5 @@
 #this is .gitignore file.
 
 /data/
+/crystal/tests/
 .DS_Store

@@ -28,10 +28,10 @@ crystal_proj/
 │   ├── image_window.py
 │   ├── plot_window.py
 │   ├── core.py
-│   └── utils.py            
-│
-└── tests/
-    └── spot_detect_new_v1.py
+│   ├── utils.py            
+│   └── tests/
+│				└── spot_detect_new_v1.py
+    
 
 
 ```
