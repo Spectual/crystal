@@ -1,3 +1,4 @@
 #this is .gitignore file.
 
-data/
+/data/
+.DS_Store
