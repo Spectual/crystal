@@ -15,24 +15,20 @@ python run.py
 ## Project Structure
 
 ```shell
-crystal_proj/
-│
-├── README.md               
-├── run.py
-├── data/
+crystal
+├── README-ZH.md
+├── README.md
+├── crystal
+│   ├── __init__.py
+│   ├── core.py
+│   ├── image_processing.py
+│   ├── image_window.py
+│   ├── plot_window.py
+│   ├── scripts
+│   │   └── sync_images.py
+│   └── utils.py
 ├── requirements.txt
-│
-├── crystal/             
-│   ├── __init__.py        
-│   ├── image_processing.py
-│   ├── image_window.py
-│   ├── plot_window.py
-│   ├── core.py
-│   ├── utils.py            
-│   └── tests/
-│				└── spot_detect_new_v1.py
-    
-
-
+├── run-script.py
+└── run.py
 ```
 
