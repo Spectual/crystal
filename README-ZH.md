@@ -31,6 +31,6 @@ crystal
 │   └── utils.py
 ├── requirements.txt
 ├── run-script.py
-└── run.py
+└── run-gui.py
 ```
 

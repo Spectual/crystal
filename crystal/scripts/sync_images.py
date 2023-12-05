@@ -4,6 +4,15 @@ import shutil
 import time
 from ..utils import get_image_files
 
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=int, default=1)
+parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default='data/46')
+parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default='data/test')
+
+args = parser.parse_known_args()[0]
+
 def copy_images_periodically(source_folder, target_folder, interval):
     """
     :param source_folder: 源文件夹路径
@@ -17,10 +26,8 @@ def copy_images_periodically(source_folder, target_folder, interval):
         print(f"文件 {os.path.basename(image_file)} 已被复制到 {target_folder}")
         time.sleep(interval)
 
-def run(interval):# 使用示例
-    source_folder = 'data/46'  # 源文件夹路径
-    target_folder = 'data/test'  # 目标文件夹路径
-    copy_images_periodically(source_folder, target_folder, interval)
+def run():
+    copy_images_periodically(args.source_folder, args.target_folder, args.interval)
 
 if __name__ == "__main__":
     run()
