@@ -32,5 +32,7 @@ def get_image_files(folder_path):
 
     return images
 
+    
+
 if __name__ == "__main__":
     print(get_image_files('./data'))

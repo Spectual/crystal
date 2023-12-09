@@ -83,6 +83,29 @@ def spot_detection(image_path):
     contour_img = Image.fromarray(contour_img)
     return contour_img, info, os.path.basename(image_path)
 
+def compute_std_min_ratio(image_path, rect):
+    """
+    Computes the ratio of the standard deviation to the minimum grayscale value in a specified 
+    rectangular region of an image.
+
+    :param image_path: Path to the image file.
+    :param rect: A tuple (x1, y1, x2, y2) 
+    :return: Ratio of the standard deviation to the minimum grayscale value in the region.
+    """
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    x1, y1, x2, y2 = rect
+    sub_image = image[y1:y2, x1:x2]
+    hist = cv2.calcHist([sub_image], [0], None, [256], [0, 256]).flatten()
+    std_dev = np.std(hist)
+    min_val = (np.min(sub_image) / 255) * 100
+
+    if min_val == 0:
+        return float('inf')
+
+    return std_dev / min_val
+
+
 if __name__ == "__main__":
     img_path = './data/455-1.png'
     img = cv2.imread(img_path)

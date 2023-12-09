@@ -54,3 +54,28 @@ class AreaPlotWindow(QMainWindow):
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Area')
         self.canvas.draw()
+
+class Std2minPlotWindow(QMainWindow):
+    '''
+    绘制暗斑区域参数变化图表
+    '''
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Std2min Changes")
+        self.setGeometry(1300, 100, 600, 400)
+
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        self.canvas = FigureCanvas(self.fig)
+        self.setCentralWidget(self.canvas)
+
+    def update_plot(self, std2min_data):
+        self.ax.clear()
+
+        x = list(range(len(std2min_data)))
+        self.ax.plot(x, std2min_data, label='dark spot')
+
+        self.ax.legend()
+        self.ax.set_xlabel('Image Index')
+        self.ax.set_ylabel('Std2min')
+        self.canvas.draw()

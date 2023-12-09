@@ -2,15 +2,16 @@ import os
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QLabel, QTextEdit, QWidget, QFileDialog, QPushButton
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt,QTimer
-from .image_processing import spot_detection
+from .image_processing import spot_detection, compute_std_min_ratio
 from .utils import get_image_files, convert_image_for_display, update_info_box
 
 class ImageWindow(QMainWindow):
-    def __init__(self, area_window, elongation_window):
+    def __init__(self, area_window, elongation_window, std2min_window):
         super().__init__()
 
         self.area_window = area_window
         self.elongation_window = elongation_window
+        self.std2min_window = std2min_window
 
         self.setWindowTitle("晶体图像分析")
         self.setGeometry(100, 100, 600, 400)
@@ -40,6 +41,7 @@ class ImageWindow(QMainWindow):
         self.current_index = -1
         self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
+        self.std2min_data = []
         self.processed_images = set()
 
         # 定时器用于定期检查文件夹
@@ -55,11 +57,13 @@ class ImageWindow(QMainWindow):
             self.area_window.close()
         if self.elongation_window is not None:
             self.elongation_window.close()
+        if self.std2min_window is not None:
+            self.std2min_window.close()
 
         self.close()
 
     def load_images(self):
-        folder_path = QFileDialog.getExistingDirectory(self, "Select Image Directory")
+        folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
         # folder_path = './data/test'
         if not folder_path:
             return
@@ -78,7 +82,7 @@ class ImageWindow(QMainWindow):
         self.current_index += 1
         if self.current_index < len(self.images):
             self.show_image(self.images[self.current_index])
-            QTimer.singleShot(500, self.display_next_image)  
+            QTimer.singleShot(100, self.display_next_image)  
 
 
     def check_for_new_images(self):
@@ -98,6 +102,8 @@ class ImageWindow(QMainWindow):
         self.infoBox.clear()
 
         image, info, image_name = spot_detection(image_path)
+        rect = (204,60,204+330,60+74)
+        sdt2min = compute_std_min_ratio(image_path, rect)
         pixmap = convert_image_for_display(image)
 
         self.setWindowTitle(image_name)
@@ -105,8 +111,12 @@ class ImageWindow(QMainWindow):
         self.imageLabel.adjustSize()
 
         update_info_box(self.infoBox, info, self.area_data, self.elongation_data)
+        self.std2min_data.append(sdt2min)
 
         if image_path not in self.processed_images: 
             self.processed_images.add(image_path)  
             self.area_window.update_plot(self.area_data)  
             self.elongation_window.update_plot(self.elongation_data)
+            self.std2min_window.update_plot(self.std2min_data)
+
+

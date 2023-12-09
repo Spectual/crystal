@@ -7,7 +7,7 @@ from ..utils import get_image_files
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=int, default=1)
+parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=1)
 parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default='data/46')
 parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default='data/test')
 
