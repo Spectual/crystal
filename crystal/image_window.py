@@ -2,8 +2,8 @@ import os
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QLabel, QTextEdit, QWidget, QFileDialog, QPushButton
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt,QTimer
-from .image_processing import spot_detection, compute_std_min_ratio
-from .utils import get_image_files, convert_image_for_display, update_info_box
+from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation
+from .utils import get_image_files, convert_image_for_display, update_info
 
 class ImageWindow(QMainWindow):
     def __init__(self, area_window, elongation_window, std2min_window):
@@ -82,7 +82,7 @@ class ImageWindow(QMainWindow):
         self.current_index += 1
         if self.current_index < len(self.images):
             self.show_image(self.images[self.current_index])
-            QTimer.singleShot(100, self.display_next_image)  
+            QTimer.singleShot(500, self.display_next_image)  
 
 
     def check_for_new_images(self):
@@ -100,18 +100,22 @@ class ImageWindow(QMainWindow):
 
     def show_image(self, image_path):
         self.infoBox.clear()
-
-        image, info, image_name = spot_detection(image_path)
+        
         rect = (204,60,204+330,60+74)
-        sdt2min = compute_std_min_ratio(image_path, rect)
+
+        image, info, image_name = spot_detection(image_path, rect)
+        std2min = compute_std_min_ratio(image_path, rect)
         pixmap = convert_image_for_display(image)
 
         self.setWindowTitle(image_name)
         self.imageLabel.setPixmap(pixmap)
         self.imageLabel.adjustSize()
 
-        update_info_box(self.infoBox, info, self.area_data, self.elongation_data)
-        self.std2min_data.append(sdt2min)
+        update_info(info, self.area_data, self.elongation_data)
+        self.std2min_data.append(std2min)
+
+        eval_result = spot_evaluation(info, self.area_data, self.std2min_data)
+        self.infoBox.append(eval_result)
 
         if image_path not in self.processed_images: 
             self.processed_images.add(image_path)  

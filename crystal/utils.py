@@ -6,14 +6,14 @@ def convert_image_for_display(image):
     qim = QImage(image.tobytes('raw', 'RGB'), image.width, image.height, QImage.Format_RGB888)
     return QPixmap.fromImage(qim)
 
-def update_info_box(info_box, info, area_data, elongation_data):
+def update_info(info, area_data, elongation_data):
     detected_spots = set(info.keys())
 
     for name in ['bright_l', 'bright_m', 'bright_r']:
         if name in detected_spots:
-            info_box.append(f"{name}:")
-            info_box.append(f"  centroid = {info[name]['centroid']}")
-            info_box.append(f"  area = {info[name]['area']}\n")
+            # info_box.append(f"{name}:")
+            # info_box.append(f"  centroid = {info[name]['centroid']}")
+            # info_box.append(f"  area = {info[name]['area']}\n")
             area_data[name].append(info[name]['area'])
             elongation_data[name].append(info[name]['elongation'])
         else:
@@ -32,7 +32,7 @@ def get_image_files(folder_path):
 
     return images
 
-    
+
 
 if __name__ == "__main__":
     print(get_image_files('./data'))

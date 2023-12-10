@@ -21,8 +21,9 @@ class ElongationPlotWindow(QMainWindow):
 
         x = list(range(len(elongation_data['bright_l'])))
         for name, elongations in elongation_data.items():
-            self.ax.plot(x, elongations, label=name)
+            self.ax.plot(x, [elong - elongations[0] for elong in elongations], label=name)
 
+        self.ax.plot(x, [0 for i in x], label="ori", color='r')
         self.ax.legend()
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Elongation')
@@ -49,7 +50,7 @@ class AreaPlotWindow(QMainWindow):
         x = list(range(len(area_data['bright_l'])))
         for name, areas in area_data.items():
             self.ax.plot(x, [area - areas[0] for area in areas], label=name, marker='o')
-
+        self.ax.plot(x, [0 for i in x], label="ori", color='r')
         self.ax.legend()
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Area')
@@ -73,8 +74,8 @@ class Std2minPlotWindow(QMainWindow):
         self.ax.clear()
 
         x = list(range(len(std2min_data)))
-        self.ax.plot(x, std2min_data, label='dark spot')
-
+        self.ax.plot(x, [std2min - std2min_data[0] for std2min in std2min_data], label='dark spot', marker='o')
+        self.ax.plot(x, [0 for i in x], label="ori", color='r')
         self.ax.legend()
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Std2min')

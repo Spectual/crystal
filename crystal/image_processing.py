@@ -53,7 +53,7 @@ def detect_and_name_spots(bin_img, img):
     return contour_img, info, ellipses
 
 
-def draw_and_label(contour_img, info, ellipses):
+def draw_and_label(contour_img, info, ellipses, rect):
     '''
     在图像上绘制光斑相关属性
     '''
@@ -68,17 +68,21 @@ def draw_and_label(contour_img, info, ellipses):
                 cv2.circle(contour_img, (int(ex), int(ey)), 5, (255, 0, 0), -1)
                 cv2.putText(contour_img, name, (int(ex), int(ey - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                 break
+
+    x1, y1, x2, y2 = rect
+    cv2.rectangle(contour_img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
     return contour_img
 
 
-def spot_detection(image_path):
+def spot_detection(image_path, rect):
     '''
     光斑检测函数，返回绘制后图像、光斑信息、图像路径
     '''
     img = cv2.imread(image_path)
     bin_img = preprocess_image(img)
     contour_img, info, ellipses = detect_and_name_spots(bin_img, img)
-    contour_img = draw_and_label(contour_img, info, ellipses)
+    contour_img = draw_and_label(contour_img, info, ellipses, rect)
     contour_img = cv2.cvtColor(contour_img, cv2.COLOR_BGR2RGB)
     contour_img = Image.fromarray(contour_img)
     return contour_img, info, os.path.basename(image_path)
@@ -104,6 +108,18 @@ def compute_std_min_ratio(image_path, rect):
         return float('inf')
 
     return std_dev / min_val
+
+def spot_evaluation(info, area_data, std2min_data):
+    if len(info) < 3:
+        return "不正常"
+
+    if std2min_data[-1] - std2min_data[0] < -0.6:
+        return "标准差/最小强度 过低"
+
+
+
+
+    # area = area_data[-1] - area_data[0]
 
 
 if __name__ == "__main__":
