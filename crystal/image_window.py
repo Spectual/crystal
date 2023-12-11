@@ -1,17 +1,19 @@
 import os
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QLabel, QTextEdit, QWidget, QFileDialog, QPushButton
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt,QTimer
-from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation
+from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness
 from .utils import get_image_files, convert_image_for_display, update_info
 
 class ImageWindow(QMainWindow):
-    def __init__(self, area_window, elongation_window, std2min_window):
+    def __init__(self, area_window, elongation_window, std2min_window, brightness_window, hist_window, interval):
         super().__init__()
 
         self.area_window = area_window
         self.elongation_window = elongation_window
         self.std2min_window = std2min_window
+        self.brightness_window = brightness_window
+        self.hist_window = hist_window
 
         self.setWindowTitle("晶体图像分析")
         self.setGeometry(100, 100, 600, 400)
@@ -22,6 +24,9 @@ class ImageWindow(QMainWindow):
         layout.addWidget(self.imageLabel)
 
         self.infoBox = QTextEdit(self)
+        font = QFont()
+        font.setPointSize(30)  
+        self.infoBox.setFont(font)  
         layout.addWidget(self.infoBox)
 
         self.openDirectoryButton = QPushButton("打开文件夹", self)
@@ -42,12 +47,15 @@ class ImageWindow(QMainWindow):
         self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.std2min_data = []
+        self.brightness_data = []
         self.processed_images = set()
 
         # 定时器用于定期检查文件夹
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
         self.timer.start(100)  
+
+        self.interval = interval
 
     def close_application(self):
         '''
@@ -59,18 +67,22 @@ class ImageWindow(QMainWindow):
             self.elongation_window.close()
         if self.std2min_window is not None:
             self.std2min_window.close()
+        if self.hist_window is not None:
+            self.hist_window.close()
+        if self.brightness_window is not None:
+            self.brightness_window.close()
 
         self.close()
 
     def load_images(self):
         folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
-        # folder_path = './data/test'
+        # folder_path = './data/27'
         if not folder_path:
             return
 
         self.current_folder = folder_path
         self.images = get_image_files(folder_path)
-        self.current_index = -1  # 重置索引
+        self.current_index = -1  
 
         if self.images:
             self.display_next_image()
@@ -82,7 +94,7 @@ class ImageWindow(QMainWindow):
         self.current_index += 1
         if self.current_index < len(self.images):
             self.show_image(self.images[self.current_index])
-            QTimer.singleShot(500, self.display_next_image)  
+            QTimer.singleShot(self.interval, self.display_next_image)  
 
 
     def check_for_new_images(self):
@@ -99,12 +111,13 @@ class ImageWindow(QMainWindow):
                 self.show_image(new_image)
 
     def show_image(self, image_path):
-        self.infoBox.clear()
-        
+        # self.infoBox.clear()
+
         rect = (204,60,204+330,60+74)
 
         image, info, image_name = spot_detection(image_path, rect)
         std2min = compute_std_min_ratio(image_path, rect)
+        brightness = compute_brightness(image_path)
         pixmap = convert_image_for_display(image)
 
         self.setWindowTitle(image_name)
@@ -113,8 +126,9 @@ class ImageWindow(QMainWindow):
 
         update_info(info, self.area_data, self.elongation_data)
         self.std2min_data.append(std2min)
+        self.brightness_data.append(brightness)
 
-        eval_result = spot_evaluation(info, self.area_data, self.std2min_data)
+        eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data)
         self.infoBox.append(eval_result)
 
         if image_path not in self.processed_images: 
@@ -122,5 +136,8 @@ class ImageWindow(QMainWindow):
             self.area_window.update_plot(self.area_data)  
             self.elongation_window.update_plot(self.elongation_data)
             self.std2min_window.update_plot(self.std2min_data)
+            self.brightness_window.update_plot(self.brightness_data)
+            # self.hist_window.update_plot([param - self.elongation_data['bright_l'][0] for param in self.elongation_data['bright_l']])
+            self.hist_window.update_plot([param - self.std2min_data[0] for param in self.std2min_data])
 
 

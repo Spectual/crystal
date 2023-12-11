@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
+import numpy as np
 
 class ElongationPlotWindow(QMainWindow):
     '''
@@ -80,3 +81,56 @@ class Std2minPlotWindow(QMainWindow):
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Std2min')
         self.canvas.draw()
+
+class BrightnessPlotWindow(QMainWindow):
+    '''
+    绘制亮度参数变化图表
+    '''
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Brightness Changes")
+        self.setGeometry(1300, 100, 600, 400)
+
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        self.canvas = FigureCanvas(self.fig)
+        self.setCentralWidget(self.canvas)
+
+    def update_plot(self, brightness_data):
+        self.ax.clear()
+
+        x = list(range(len(brightness_data)))
+        self.ax.plot(x, [bright - brightness_data[0] for bright in brightness_data], label='brightness', marker='o')
+        self.ax.plot(x, [0 for i in x], label="ori", color='r')
+        self.ax.legend()
+        self.ax.set_xlabel('Image Index')
+        self.ax.set_ylabel('Brightness')
+        self.canvas.draw()
+
+class HistPlotWindow(QMainWindow):
+    '''
+    绘制暗斑区域参数变化图表
+    '''
+    def __init__(self):
+        super().__init__()
+
+        self.setWindowTitle("Hist of Params")
+        self.setGeometry(1300, 100, 600, 400)
+
+        self.fig, self.ax = plt.subplots(figsize=(6, 4))
+        self.canvas = FigureCanvas(self.fig)
+        self.setCentralWidget(self.canvas)
+
+    def update_plot(self, param_data):
+        self.ax.clear()
+
+        bin_width = 0.1
+        bins = np.arange(min(param_data), max(param_data) + bin_width, bin_width)
+
+        self.ax.hist(param_data, bins=bins, label='param')
+        self.ax.legend(labels = 'param')
+        self.ax.set_xlabel('Value Intervals')
+        self.ax.set_ylabel('Frequency')
+        self.canvas.draw()
+
+

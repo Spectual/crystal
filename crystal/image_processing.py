@@ -109,13 +109,51 @@ def compute_std_min_ratio(image_path, rect):
 
     return std_dev / min_val
 
-def spot_evaluation(info, area_data, std2min_data):
+
+def compute_brightness(image_path):
+
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+    mask = (image > 10)
+
+    filtered_image = image[mask]
+
+    height, width = image.shape
+    upper_part_mask = mask[:height // 2, :]
+    middle_part_mask = mask[height // 4: 3 * height // 4, :]
+
+    upper_part = image[:height // 2, :][upper_part_mask[:height // 2, :]]
+    middle_part = image[height // 4: 3 * height // 4, :][middle_part_mask]
+
+    upper_brightness = np.mean(upper_part) if upper_part.size > 0 else 0
+    middle_brightness = np.mean(middle_part) if middle_part.size > 0 else 0
+    overall_brightness = np.mean(filtered_image) if filtered_image.size > 0 else 0
+
+    upper_weight = 0.4  
+    middle_weight = 0.4 
+    overall_weight = 0.2
+
+    weighted_avg_brightness = (upper_brightness * upper_weight +
+                               middle_brightness * middle_weight +
+                               overall_brightness * overall_weight)
+
+    return weighted_avg_brightness
+
+def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data):
     if len(info) < 3:
-        return "不正常"
+        return image_path + "\n不正常"
 
     if std2min_data[-1] - std2min_data[0] < -0.6:
-        return "标准差/最小强度 过低"
+        return image_path + "\n标准差/最小强度 过低"
 
+    if area_data['bright_l'][-1]  - area_data['bright_l'][0] < -800:
+        return image_path + "\n面积 大幅度变小"
+
+    if area_data['bright_l'][-1]  - area_data['bright_l'][0] > 800:
+        return image_path + "\n面积 大幅度变大"
+
+    if elongation_data['bright_r'][-1]  - elongation_data['bright_r'][0] > 0.1:
+        return image_path + "\n亮光斑 变细"
 
 
 
