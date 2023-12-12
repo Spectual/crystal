@@ -6,14 +6,14 @@ from .image_processing import spot_detection, compute_std_min_ratio, spot_evalua
 from .utils import get_image_files, convert_image_for_display, update_info
 
 class ImageWindow(QMainWindow):
-    def __init__(self, area_window, elongation_window, std2min_window, brightness_window, hist_window, interval):
+    def __init__(self, area_window, elongation_window, std2min_window, brightness_window, interval, image_area):
         super().__init__()
 
         self.area_window = area_window
         self.elongation_window = elongation_window
         self.std2min_window = std2min_window
         self.brightness_window = brightness_window
-        self.hist_window = hist_window
+        # self.hist_window = hist_window
 
         self.setWindowTitle("晶体图像分析")
         self.setGeometry(100, 100, 600, 400)
@@ -56,6 +56,7 @@ class ImageWindow(QMainWindow):
         self.timer.start(100)  
 
         self.interval = interval
+        self.image_area = image_area
 
     def close_application(self):
         '''
@@ -67,8 +68,8 @@ class ImageWindow(QMainWindow):
             self.elongation_window.close()
         if self.std2min_window is not None:
             self.std2min_window.close()
-        if self.hist_window is not None:
-            self.hist_window.close()
+        # if self.hist_window is not None:
+        #     self.hist_window.close()
         if self.brightness_window is not None:
             self.brightness_window.close()
 
@@ -115,9 +116,9 @@ class ImageWindow(QMainWindow):
 
         rect = (204,60,204+330,60+74)
 
-        image, info, image_name = spot_detection(image_path, rect)
-        std2min = compute_std_min_ratio(image_path, rect)
-        brightness = compute_brightness(image_path)
+        image, info, image_name = spot_detection(image_path, rect, self.image_area)
+        std2min = compute_std_min_ratio(image_path, rect, self.image_area)
+        brightness = compute_brightness(image_path, self.image_area)
         pixmap = convert_image_for_display(image)
 
         self.setWindowTitle(image_name)
@@ -138,6 +139,6 @@ class ImageWindow(QMainWindow):
             self.std2min_window.update_plot(self.std2min_data)
             self.brightness_window.update_plot(self.brightness_data)
             # self.hist_window.update_plot([param - self.elongation_data['bright_l'][0] for param in self.elongation_data['bright_l']])
-            self.hist_window.update_plot([param - self.std2min_data[0] for param in self.std2min_data])
+            # self.hist_window.update_plot([param - self.std2min_data[0] for param in self.std2min_data])
 
 

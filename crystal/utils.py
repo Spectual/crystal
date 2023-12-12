@@ -25,9 +25,13 @@ def get_image_files(folder_path):
         return []
 
     image_files = sorted(
-        [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg'))],
+        [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))],
         key=lambda x: int(x.split('-')[0])
     )
+    # image_files = sorted(
+    #     [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))],
+    #     key=lambda x: int(os.path.splitext(x)[0])  # 直接将文件名转换为整数进行排序
+    # )
     images = [os.path.join(folder_path, image_file) for image_file in image_files]
 
     return images

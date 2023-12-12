@@ -4,6 +4,13 @@ import os
 import matplotlib.pyplot as plt
 from PIL import Image
 
+def cut_image(image_path, image_area):
+    img = cv2.imread(image_path)
+    x1, y1, x2, y2 = image_area
+    img = img[y1:y2, x1:x2]
+    img = cv2.resize(img, (640, 480))
+    return img
+
 def preprocess_image(img):
     '''
     图像预处理
@@ -75,11 +82,11 @@ def draw_and_label(contour_img, info, ellipses, rect):
     return contour_img
 
 
-def spot_detection(image_path, rect):
+def spot_detection(image_path, rect, image_area):
     '''
     光斑检测函数，返回绘制后图像、光斑信息、图像路径
     '''
-    img = cv2.imread(image_path)
+    img = cut_image(image_path, image_area)
     bin_img = preprocess_image(img)
     contour_img, info, ellipses = detect_and_name_spots(bin_img, img)
     contour_img = draw_and_label(contour_img, info, ellipses, rect)
@@ -87,7 +94,7 @@ def spot_detection(image_path, rect):
     contour_img = Image.fromarray(contour_img)
     return contour_img, info, os.path.basename(image_path)
 
-def compute_std_min_ratio(image_path, rect):
+def compute_std_min_ratio(image_path, rect, image_area):
     """
     Computes the ratio of the standard deviation to the minimum grayscale value in a specified 
     rectangular region of an image.
@@ -96,24 +103,25 @@ def compute_std_min_ratio(image_path, rect):
     :param rect: A tuple (x1, y1, x2, y2) 
     :return: Ratio of the standard deviation to the minimum grayscale value in the region.
     """
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
+    image = cut_image(image_path, image_area)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)   
     x1, y1, x2, y2 = rect
     sub_image = image[y1:y2, x1:x2]
     hist = cv2.calcHist([sub_image], [0], None, [256], [0, 256]).flatten()
     std_dev = np.std(hist)
     min_val = (np.min(sub_image) / 255) * 100
-
+    # cv2.imwrite('./data/test/sub.png',sub_image)
+    # print(min_val)
     if min_val == 0:
         return float('inf')
 
     return std_dev / min_val
 
 
-def compute_brightness(image_path):
+def compute_brightness(image_path, image_area):
 
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-
+    image = cut_image(image_path, image_area)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     mask = (image > 10)
 
     filtered_image = image[mask]
@@ -144,16 +152,16 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data):
         return image_path + "\n不正常"
 
     if std2min_data[-1] - std2min_data[0] < -0.6:
-        return image_path + "\n标准差/最小强度 过低"
+        return image_path + "\n暗斑 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] < -800:
-        return image_path + "\n面积 大幅度变小"
+        return image_path + "\n面积 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] > 800:
-        return image_path + "\n面积 大幅度变大"
+        return image_path + "\n面积 异常"
 
     if elongation_data['bright_r'][-1]  - elongation_data['bright_r'][0] > 0.1:
-        return image_path + "\n亮光斑 变细"
+        return image_path + "\n亮斑 变细"
 
 
 
