@@ -4,6 +4,7 @@ from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt,QTimer
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness
 from .utils import get_image_files, convert_image_for_display, update_info
+import time
 
 class ImageWindow(QMainWindow):
     def __init__(self, area_window, elongation_window, std2min_window, brightness_window, interval, image_area):
@@ -77,7 +78,7 @@ class ImageWindow(QMainWindow):
 
     def load_images(self):
         folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
-        # folder_path = './data/27'
+        # folder_path = './data/test'
         if not folder_path:
             return
 
@@ -121,7 +122,12 @@ class ImageWindow(QMainWindow):
         brightness = compute_brightness(image_path, self.image_area)
         pixmap = convert_image_for_display(image)
 
-        self.setWindowTitle(image_name)
+        # 将时间戳转换为本地时间
+        local_time = time.localtime(int(os.path.splitext(image_name)[0]))
+
+        # 格式化为年月日时分秒
+        formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+        self.setWindowTitle(formatted_time)
         self.imageLabel.setPixmap(pixmap)
         self.imageLabel.adjustSize()
 

@@ -3,12 +3,16 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from PIL import Image
+import time
 
 def cut_image(image_path, image_area):
     img = cv2.imread(image_path)
     x1, y1, x2, y2 = image_area
-    img = img[y1:y2, x1:x2]
-    img = cv2.resize(img, (640, 480))
+    try:
+        img = img[y1:y2, x1:x2]
+        img = cv2.resize(img, (640, 480))
+    except:
+        img = np.zeros((480, 640, 3), dtype=np.uint8)
     return img
 
 def preprocess_image(img):
@@ -148,20 +152,26 @@ def compute_brightness(image_path, image_area):
     return weighted_avg_brightness
 
 def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data):
+
+    image_name = os.path.basename(image_path)
+    local_time = time.localtime(int(os.path.splitext(image_name)[0]))
+
+    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+
     if len(info) < 3:
-        return image_path + "\n不正常"
+        return image_name + " " + formatted_time + "\n不正常"
 
     if std2min_data[-1] - std2min_data[0] < -0.6:
-        return image_path + "\n暗斑 异常"
+        return image_name + " " + formatted_time + "\n暗斑 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] < -800:
-        return image_path + "\n面积 异常"
+        return image_name + " " + formatted_time + "\n面积 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] > 800:
-        return image_path + "\n面积 异常"
+        return image_name + " " + formatted_time + "\n面积 异常"
 
     if elongation_data['bright_r'][-1]  - elongation_data['bright_r'][0] > 0.1:
-        return image_path + "\n亮斑 变细"
+        return image_name + " " + formatted_time + "\n亮斑 变细"
 
 
 

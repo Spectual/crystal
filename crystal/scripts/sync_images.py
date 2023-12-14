@@ -8,8 +8,8 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=1)
-parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default='data/46')
-parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default='data/test')
+parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default=r"\\192.168.4.170\test")
+parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default=r'data\test')
 
 args = parser.parse_known_args()[0]
 
@@ -24,11 +24,13 @@ def copy_images_periodically(source_folder, target_folder, interval):
         for image_file in image_files:
             target_file = os.path.join(target_folder, os.path.basename(image_file))
             try:
-                shutil.copy2(image_file, target_file)
+                if not os.path.exists(target_file):
+                    shutil.copy2(image_file, target_file)
+                    print(f"文件 {os.path.basename(image_file)} 已被复制到 {target_folder}")
             except:
                 print(image_file,"不存在")
-            print(f"文件 {os.path.basename(image_file)} 已被复制到 {target_folder}")
-            time.sleep(interval)
+
+            # time.sleep(interval)                 
 
 def run():
     copy_images_periodically(args.source_folder, args.target_folder, args.interval)

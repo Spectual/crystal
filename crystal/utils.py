@@ -11,9 +11,6 @@ def update_info(info, area_data, elongation_data):
 
     for name in ['bright_l', 'bright_m', 'bright_r']:
         if name in detected_spots:
-            # info_box.append(f"{name}:")
-            # info_box.append(f"  centroid = {info[name]['centroid']}")
-            # info_box.append(f"  area = {info[name]['area']}\n")
             area_data[name].append(info[name]['area'])
             elongation_data[name].append(info[name]['elongation'])
         else:
@@ -24,14 +21,14 @@ def get_image_files(folder_path):
     if not folder_path:
         return []
 
-    image_files = sorted(
-        [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))],
-        key=lambda x: int(x.split('-')[0])
-    )
     # image_files = sorted(
     #     [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))],
-    #     key=lambda x: int(os.path.splitext(x)[0])  # 直接将文件名转换为整数进行排序
+    #     key=lambda x: int(x.split('-')[0])
     # )
+    image_files = sorted(
+        [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))],
+        key=lambda x: int(os.path.splitext(x)[0])  # 直接将文件名转换为整数进行排序
+    )
     images = [os.path.join(folder_path, image_file) for image_file in image_files]
 
     return images

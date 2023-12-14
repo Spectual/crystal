@@ -6,7 +6,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=100)
-parser.add_argument('-a', '--image-area', nargs=4, help='image area', dest='image_area', type=int, default=(0,0,640,480))
+parser.add_argument('-a', '--image-area', nargs=4, help='image area', dest='image_area', type=int, default=(950, 137, 1430, 495))
 
 args = parser.parse_known_args()[0]
 
