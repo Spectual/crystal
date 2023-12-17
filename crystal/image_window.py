@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QLabel, QTextEdit, QWidget
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt,QTimer
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness
-from .utils import get_image_files, convert_image_for_display, update_info
+from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename
 import time
 
 class ImageWindow(QMainWindow):
@@ -42,6 +42,7 @@ class ImageWindow(QMainWindow):
         centralWidget.setLayout(layout)
         self.setCentralWidget(centralWidget)
 
+        #存放数据
         self.current_folder = None
         self.images = []
         self.current_index = -1
@@ -117,16 +118,14 @@ class ImageWindow(QMainWindow):
 
         rect = (204,60,204+330,60+74)
 
-        image, info, image_name = spot_detection(image_path, rect, self.image_area)
+        image, info, image_filename = spot_detection(image_path, rect, self.image_area)
         std2min = compute_std_min_ratio(image_path, rect, self.image_area)
         brightness = compute_brightness(image_path, self.image_area)
         pixmap = convert_image_for_display(image)
 
-        # 将时间戳转换为本地时间
-        local_time = time.localtime(int(os.path.splitext(image_name)[0]))
+        image_name = split_timestamp_from_filename(image_filename)
+        formatted_time = timestamp_to_datetime(image_name)
 
-        # 格式化为年月日时分秒
-        formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
         self.setWindowTitle(formatted_time)
         self.imageLabel.setPixmap(pixmap)
         self.imageLabel.adjustSize()

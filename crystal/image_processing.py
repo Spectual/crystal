@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from PIL import Image
 import time
+from .utils import timestamp_to_datetime, split_timestamp_from_filename
 
 def cut_image(image_path, image_area):
     img = cv2.imread(image_path)
@@ -114,8 +115,6 @@ def compute_std_min_ratio(image_path, rect, image_area):
     hist = cv2.calcHist([sub_image], [0], None, [256], [0, 256]).flatten()
     std_dev = np.std(hist)
     min_val = (np.min(sub_image) / 255) * 100
-    # cv2.imwrite('./data/test/sub.png',sub_image)
-    # print(min_val)
     if min_val == 0:
         return float('inf')
 
@@ -153,25 +152,25 @@ def compute_brightness(image_path, image_area):
 
 def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data):
 
-    image_name = os.path.basename(image_path)
-    local_time = time.localtime(int(os.path.splitext(image_name)[0]))
+    image_filename = os.path.basename(image_path)
+    image_name = split_timestamp_from_filename(image_filename)
 
-    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", local_time)
+    formatted_time = timestamp_to_datetime(image_name)
 
     if len(info) < 3:
-        return image_name + " " + formatted_time + "\n不正常"
+        return image_filename + " " + formatted_time + "\n不正常"
 
     if std2min_data[-1] - std2min_data[0] < -0.6:
-        return image_name + " " + formatted_time + "\n暗斑 异常"
+        return image_filename + " " + formatted_time + "\n暗斑 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] < -800:
-        return image_name + " " + formatted_time + "\n面积 异常"
+        return image_filename + " " + formatted_time + "\n面积 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] > 800:
-        return image_name + " " + formatted_time + "\n面积 异常"
+        return image_filename + " " + formatted_time + "\n面积 异常"
 
     if elongation_data['bright_r'][-1]  - elongation_data['bright_r'][0] > 0.1:
-        return image_name + " " + formatted_time + "\n亮斑 变细"
+        return image_filename + " " + formatted_time + "\n亮斑 变细"
 
 
 

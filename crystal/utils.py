@@ -1,6 +1,26 @@
 import os
 from PyQt5.QtGui import QImage, QPixmap
 import numpy as np
+import time
+
+def split_timestamp_from_filename(image_filename):
+    '''
+    input: "123.png"
+    output: 123
+    '''
+    try:
+        return int(os.path.splitext(image_filename)[0])
+        
+    except ValueError:
+        return os.path.splitext(image_filename)[0]
+
+def timestamp_to_datetime(timestamp):
+    # 将时间戳转换为年月日时分秒
+    if not isinstance(timestamp, int):
+        return timestamp
+    date_time = time.localtime(timestamp)
+    formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", date_time)
+    return formatted_time
 
 def convert_image_for_display(image):
     qim = QImage(image.tobytes('raw', 'RGB'), image.width, image.height, QImage.Format_RGB888)
@@ -21,14 +41,11 @@ def get_image_files(folder_path):
     if not folder_path:
         return []
 
-    # image_files = sorted(
-    #     [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))],
-    #     key=lambda x: int(x.split('-')[0])
-    # )
     image_files = sorted(
         [f for f in os.listdir(folder_path) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp'))],
-        key=lambda x: int(os.path.splitext(x)[0])  # 直接将文件名转换为整数进行排序
+        key=lambda x: int(x.split('-')[0].split('.')[0])
     )
+
     images = [os.path.join(folder_path, image_file) for image_file in image_files]
 
     return images
