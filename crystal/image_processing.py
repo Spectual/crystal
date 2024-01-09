@@ -39,19 +39,24 @@ def detect_and_name_spots(bin_img, img):
     contour_img = img.copy()
     ellipses = []
     bright_spots_info = {}
+    brightness = compute_brightness(img)
     for i, cnt in enumerate(contours):
         if len(cnt) >= 5:
-            hull = cv2.convexHull(cnt)
-            ellipse = cv2.fitEllipse(hull)
-            ellipses.append(ellipse)
-            [(ex, ey), (l, s), angle] = ellipse
-            elongation = max(l, s) / min(l, s)
-            bright_spots_info[i] = {
-                "centroid": (ex, ey),
-                "area": cv2.contourArea(hull),
-                "elongation": elongation,
-                "convex":hull
-            }
+            if brightness < 150:
+                hull = cv2.convexHull(cnt)
+                ellipse = cv2.fitEllipse(hull)
+                ellipses.append(ellipse)
+                [(ex, ey), (l, s), angle] = ellipse
+                elongation = max(l, s) / min(l, s)
+                area = cv2.contourArea(hull)
+                print(area)
+                if area < 5000:
+                    bright_spots_info[i] = {
+                        "centroid": (ex, ey),
+                        "area": area,
+                        "elongation": elongation,
+                        "convex":hull
+                    }
 
     num_spots = len(bright_spots_info)
     sorted_indices = sorted(bright_spots_info.keys(), key=lambda k: bright_spots_info[k]['centroid'][0])
@@ -87,19 +92,18 @@ def draw_and_label(contour_img, info, ellipses, rect):
     return contour_img
 
 
-def spot_detection(image_path, rect, image_area):
+def spot_detection(img, rect):
     '''
     光斑检测函数，返回绘制后图像、光斑信息、图像路径
     '''
-    img = cut_image(image_path, image_area)
     bin_img = preprocess_image(img)
     contour_img, info, ellipses = detect_and_name_spots(bin_img, img)
     contour_img = draw_and_label(contour_img, info, ellipses, rect)
     contour_img = cv2.cvtColor(contour_img, cv2.COLOR_BGR2RGB)
     contour_img = Image.fromarray(contour_img)
-    return contour_img, info, os.path.basename(image_path)
+    return contour_img, info
 
-def compute_std_min_ratio(image_path, rect, image_area):
+def compute_std_min_ratio(img, rect):
     """
     Computes the ratio of the standard deviation to the minimum grayscale value in a specified 
     rectangular region of an image.
@@ -108,8 +112,7 @@ def compute_std_min_ratio(image_path, rect, image_area):
     :param rect: A tuple (x1, y1, x2, y2) 
     :return: Ratio of the standard deviation to the minimum grayscale value in the region.
     """
-    image = cut_image(image_path, image_area)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)   
+    image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)   
     x1, y1, x2, y2 = rect
     sub_image = image[y1:y2, x1:x2]
     hist = cv2.calcHist([sub_image], [0], None, [256], [0, 256]).flatten()
@@ -121,10 +124,9 @@ def compute_std_min_ratio(image_path, rect, image_area):
     return std_dev / min_val
 
 
-def compute_brightness(image_path, image_area):
+def compute_brightness(img):
 
-    image = cut_image(image_path, image_area)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     mask = (image > 10)
 
     filtered_image = image[mask]

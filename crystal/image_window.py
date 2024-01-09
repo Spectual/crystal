@@ -2,7 +2,7 @@ import os
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QLabel, QTextEdit, QWidget, QFileDialog, QPushButton
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt,QTimer
-from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness
+from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename
 import time
 
@@ -118,12 +118,13 @@ class ImageWindow(QMainWindow):
 
         rect = (204,60,204+330,60+74)
 
-        image, info, image_filename = spot_detection(image_path, rect, self.image_area)
-        std2min = compute_std_min_ratio(image_path, rect, self.image_area)
-        brightness = compute_brightness(image_path, self.image_area)
-        pixmap = convert_image_for_display(image)
+        img = cut_image(image_path, self.image_area)
+        img_with_labels, info = spot_detection(img, rect)
+        std2min = compute_std_min_ratio(img, rect)
+        brightness = compute_brightness(img)
+        pixmap = convert_image_for_display(img_with_labels)
 
-        image_name = split_timestamp_from_filename(image_filename)
+        image_name = split_timestamp_from_filename(os.path.basename(image_path))
         formatted_time = timestamp_to_datetime(image_name)
 
         self.setWindowTitle(formatted_time)
