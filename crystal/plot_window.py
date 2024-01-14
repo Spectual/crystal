@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QTabWidget
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,11 +20,16 @@ class ElongationPlotWindow(QMainWindow):
     def update_plot(self, elongation_data):
         self.ax.clear()
 
-        x = list(range(len(elongation_data['bright_l'])))
-        for name, elongations in elongation_data.items():
-            self.ax.plot(x, [elong - elongations[0] for elong in elongations], label=name)
+        data_length = len(elongation_data['bright_l'])
+        start_index = max(0, data_length - 30)
+        x = list(range(start_index, data_length))
 
-        self.ax.plot(x, [0 for i in x], label="ori", color='r')
+        for name, elongations in elongation_data.items():
+            elongations_last_30 = elongations[-30:]
+            self.ax.plot(x, [elong - elongations[start_index] for elong in elongations_last_30], label=name)
+
+        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.grid(True)
         self.ax.legend()
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Elongation')
@@ -48,14 +53,21 @@ class AreaPlotWindow(QMainWindow):
     def update_plot(self, area_data):
         self.ax.clear()
 
-        x = list(range(len(area_data['bright_l'])))
+        data_length = len(area_data['bright_l'])
+        start_index = max(0, data_length - 30)
+        x = list(range(start_index, data_length))
+
         for name, areas in area_data.items():
-            self.ax.plot(x, [area - areas[0] for area in areas], label=name, marker='o')
-        self.ax.plot(x, [0 for i in x], label="ori", color='r')
+            areas_last_30 = areas[-30:]
+            self.ax.plot(x, [area - areas[start_index] for area in areas_last_30], label=name, marker='o')
+
+        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.grid(True)
         self.ax.legend()
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Area')
         self.canvas.draw()
+
 
 class Std2minPlotWindow(QMainWindow):
     '''
@@ -74,13 +86,19 @@ class Std2minPlotWindow(QMainWindow):
     def update_plot(self, std2min_data):
         self.ax.clear()
 
-        x = list(range(len(std2min_data)))
-        self.ax.plot(x, [std2min - std2min_data[0] for std2min in std2min_data], label='dark spot', marker='o')
-        self.ax.plot(x, [0 for i in x], label="ori", color='r')
+        data_length = len(std2min_data)
+        start_index = max(0, data_length - 30)
+        x = list(range(start_index, data_length))
+        std2min_data_last_30 = std2min_data[-30:]
+
+        self.ax.plot(x, [std2min - std2min_data[0] for std2min in std2min_data_last_30], label='dark spot', marker='o')
+        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.grid(True)
         self.ax.legend()
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Std2min')
         self.canvas.draw()
+
 
 class BrightnessPlotWindow(QMainWindow):
     '''
@@ -99,38 +117,73 @@ class BrightnessPlotWindow(QMainWindow):
     def update_plot(self, brightness_data):
         self.ax.clear()
 
-        x = list(range(len(brightness_data)))
-        self.ax.plot(x, [bright - brightness_data[0] for bright in brightness_data], label='brightness', marker='o')
-        self.ax.plot(x, [0 for i in x], label="ori", color='r')
+        data_length = len(brightness_data)
+        start_index = max(0, data_length - 30)
+        x = list(range(start_index, data_length))
+
+        brightness_last_30 = brightness_data[-30:]
+        self.ax.plot(x, [bright - brightness_data[start_index] for bright in brightness_last_30], label='brightness', marker='o')
+
+        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.grid(True)
         self.ax.legend()
         self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('Brightness')
         self.canvas.draw()
 
-class HistPlotWindow(QMainWindow):
-    '''
-    绘制暗斑区域参数变化图表
-    '''
+
+class IntegratedPlotWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("综合图表分析")
+        self.setGeometry(100, 100, 900, 600)
 
-        self.setWindowTitle("Hist of Params")
-        self.setGeometry(1300, 100, 600, 400)
+        # 创建标签页
+        self.tabs = QTabWidget()
+        self.setCentralWidget(self.tabs)
 
-        self.fig, self.ax = plt.subplots(figsize=(6, 4))
-        self.canvas = FigureCanvas(self.fig)
-        self.setCentralWidget(self.canvas)
+        # 添加各个图表到标签页
+        self.elongation_tab = ElongationPlotWindow()
+        self.area_tab = AreaPlotWindow()
+        self.std2min_tab = Std2minPlotWindow()
+        self.brightness_tab = BrightnessPlotWindow()
 
-    def update_plot(self, param_data):
-        self.ax.clear()
+        self.tabs.addTab(self.elongation_tab, "Elongation")
+        self.tabs.addTab(self.area_tab, "Area")
+        self.tabs.addTab(self.std2min_tab, "Std2min")
+        self.tabs.addTab(self.brightness_tab, "Brightness")
 
-        bin_width = 0.1
-        bins = np.arange(min(param_data), max(param_data) + bin_width, bin_width)
 
-        self.ax.hist(param_data, bins=bins, label='param')
-        self.ax.legend(labels = 'param')
-        self.ax.set_xlabel('Value Intervals')
-        self.ax.set_ylabel('Frequency')
-        self.canvas.draw()
+    def update_plots(self, elongation_data, area_data, std2min_data, brightness_data):
+        self.elongation_tab.update_plot(elongation_data)
+        self.area_tab.update_plot(area_data)
+        self.std2min_tab.update_plot(std2min_data)
+        self.brightness_tab.update_plot(brightness_data)
 
+
+# class HistPlotWindow(QMainWindow):
+#     '''
+#     绘制暗斑区域参数变化图表
+#     '''
+#     def __init__(self):
+#         super().__init__()
+
+#         self.setWindowTitle("Hist of Params")
+#         self.setGeometry(1300, 100, 600, 400)
+
+#         self.fig, self.ax = plt.subplots(figsize=(6, 4))
+#         self.canvas = FigureCanvas(self.fig)
+#         self.setCentralWidget(self.canvas)
+
+#     def update_plot(self, param_data):
+#         self.ax.clear()
+
+#         bin_width = 0.1
+#         bins = np.arange(min(param_data), max(param_data) + bin_width, bin_width)
+
+#         self.ax.hist(param_data, bins=bins, label='param')
+#         self.ax.legend(labels = 'param')
+#         self.ax.set_xlabel('Value Intervals')
+#         self.ax.set_ylabel('Frequency')
+#         self.canvas.draw()
 

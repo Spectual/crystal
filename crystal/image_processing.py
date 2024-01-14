@@ -49,7 +49,7 @@ def detect_and_name_spots(bin_img, img):
                 [(ex, ey), (l, s), angle] = ellipse
                 elongation = max(l, s) / min(l, s)
                 area = cv2.contourArea(hull)
-                print(area)
+                # print(area)
                 if area < 5000:
                     bright_spots_info[i] = {
                         "centroid": (ex, ey),
@@ -80,10 +80,10 @@ def draw_and_label(contour_img, info, ellipses, rect):
         for ellipse in ellipses:
             [(ellipse_x, ellipse_y), _, _] = ellipse
             if int(ellipse_x) == int(ex) and int(ellipse_y) == int(ey):
-                cv2.drawContours(contour_img, [hull], 0, (0, 0, 255), 2)
+                # cv2.drawContours(contour_img, [hull], 0, (0, 0, 255), 2)
                 cv2.ellipse(contour_img, ellipse, (0, 255, 0), 2)
                 cv2.circle(contour_img, (int(ex), int(ey)), 5, (255, 0, 0), -1)
-                cv2.putText(contour_img, name, (int(ex), int(ey - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
+                # cv2.putText(contour_img, name, (int(ex), int(ey - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                 break
 
     x1, y1, x2, y2 = rect
