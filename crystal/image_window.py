@@ -12,14 +12,14 @@ class ImageWindow(QMainWindow):
         super().__init__()
         self.plot_window = plot_window
 
-        self.setWindowTitle("晶体图像分析")
+        self.setWindowTitle("晶体RHEED图像分析系统")
         self.setGeometry(100, 100, 600, 400)
 
         # 创建菜单栏
         self.menu_bar = self.menuBar()
         file_menu = self.menu_bar.addMenu('文件')
         analysis_menu = self.menu_bar.addMenu('分析')
-        window_menu = self.menu_bar.addMenu('窗口')
+        window_menu = self.menu_bar.addMenu('视图')
         settings_menu = self.menu_bar.addMenu('设置')
         help_menu = self.menu_bar.addMenu('帮助')
 
@@ -98,6 +98,10 @@ class ImageWindow(QMainWindow):
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
+        # 创建状态栏并存储为属性
+        self.status_bar = self.statusBar()
+        self.status_bar.showMessage("准备就绪")
+
         #存放数据
         self.current_folder = None
         self.images = []
@@ -171,9 +175,6 @@ class ImageWindow(QMainWindow):
         layout.addRow("图像坐标 x2:", self.image_coord_x2)
         layout.addRow("图像坐标 y2:", self.image_coord_y2)
 
-
-
-        # 将输入框添加到布局中
         layout.addRow("暗斑区域坐标 x1:", self.dark_rect_x1)
         layout.addRow("暗斑区域坐标 y1:", self.dark_rect_y1)
         layout.addRow("暗斑区域坐标 x2:", self.dark_rect_x2)
@@ -296,7 +297,7 @@ class ImageWindow(QMainWindow):
         image_name = split_timestamp_from_filename(os.path.basename(image_path))
         formatted_time = timestamp_to_datetime(image_name)
 
-        self.setWindowTitle(formatted_time)
+        self.status_bar.showMessage(formatted_time)
         self.imageLabel.setPixmap(pixmap)
         self.imageLabel.adjustSize()
 
