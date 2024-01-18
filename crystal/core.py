@@ -1,4 +1,5 @@
 import sys
+import platform
 from PyQt5.QtWidgets import QApplication, QSplashScreen, QMainWindow
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
@@ -6,6 +7,8 @@ from .image_window import ImageWindow
 from .plot_window import AreaPlotWindow, ElongationPlotWindow, Std2minPlotWindow, BrightnessPlotWindow, IntegratedPlotWindow
 import argparse
 import time
+
+system = platform.system()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=100)
@@ -32,7 +35,12 @@ def run():
     # hist_plot_window.show()
 
     # 创建并显示启动界面
-    splash_pix = QPixmap("/Users/spectual/Documents/Total/Project/dissertation/crystal/imgs/loading.png")  # 替换为您的图片路径
+
+    # 根据操作系统选择图片路径
+    if system == "Darwin":
+        splash_pix = QPixmap("/Users/spectual/Documents/Total/Project/dissertation/crystal/imgs/loading.jpg")  
+    if system == "Windows":
+        splash_pix = QPixmap(r"\\Mac\Home\Documents\Total\Project\dissertation\crystal\imgs\loading.png")
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.showMessage("加载中...", Qt.AlignBottom | Qt.AlignCenter, Qt.white)
@@ -46,7 +54,7 @@ def run():
     time.sleep(3)
 
     splash.close()
-    plot_window.show()
+    # plot_window.show()
     image_window.show()
 
     sys.exit(app.exec_())

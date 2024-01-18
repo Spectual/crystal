@@ -115,7 +115,7 @@ class ImageWindow(QMainWindow):
         # 定时器用于定期检查文件夹
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
-        self.timer.start(100)  
+        self.timer.start(1000)  
 
         self.interval = interval
         self.image_coord = image_coord
@@ -186,7 +186,7 @@ class ImageWindow(QMainWindow):
         buttons.rejected.connect(dialog.reject) # 点击取消时放弃更改
         layout.addWidget(buttons)
         dialog.setLayout(layout)
-        result = dialog.exec_()  # 执行对话框
+        result = dialog.exec_()  
 
         # 如果用户点击保存，则更新坐标信息
         if result == QDialog.Accepted:
@@ -232,7 +232,7 @@ class ImageWindow(QMainWindow):
 
     def parse_coordinate(self, text):
         """
-        解析输入的单个坐标文本并转换为整数。
+        解析输入的单个坐标文本并转换为整数
         """
         try:
             return int(text.strip())
@@ -257,6 +257,12 @@ class ImageWindow(QMainWindow):
 
         self.current_folder = folder_path
         self.images = get_image_files(folder_path)
+
+        #清空之前的参数
+        self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
+        self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
+        self.std2min_data = []
+        self.brightness_data = []
         self.current_index = -1  
 
         if self.images:
@@ -280,12 +286,21 @@ class ImageWindow(QMainWindow):
         if not new_images:
             return
 
-        if len(new_images) > len(self.images):
-            for new_image in new_images[len(self.images):]:
-                self.images.append(new_image)
-                self.show_image(new_image)
+        # if len(new_images) > len(self.images):
+        #     for new_image in new_images[len(self.images):]:
+        #         self.images.append(new_image)
+        #         self.show_image(new_image)
+
+
+        new_unique_images = [img for img in new_images if img not in self.images]
+
+        for new_image in new_unique_images:
+            self.images.append(new_image)
+            self.show_image(new_image)
+
 
     def show_image(self, image_path):
+        #展示处理后的图像
         # self.infoBox.clear()
 
         img = cut_image(image_path, self.image_coord)
