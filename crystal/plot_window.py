@@ -1,6 +1,11 @@
 from PyQt5.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
+
+# 指定中文字体
+rcParams['font.sans-serif'] = ['SimHei']  # 指定默认字体
+rcParams['axes.unicode_minus'] = False  # 解决保存图像时负号'-'显示为方块的问题
 
 class ElongationPlotWindow(QWidget):
     '''
@@ -19,17 +24,19 @@ class ElongationPlotWindow(QWidget):
         data_length = len(elongation_data['bright_l'])
         start_index = max(0, data_length - 30)
         x = list(range(start_index, data_length))
-
+        
+        name_zh_dic = {'bright_l':"左亮斑",'bright_m':"中亮斑",'bright_r':"右亮斑"}
+        
         for name, elongations in elongation_data.items():
             elongations_last_30 = elongations[-30:]
-            self.ax.plot(x, [elong - elongations[0] for elong in elongations_last_30], label=name)
+            self.ax.plot(x, [elong - elongations[0] for elong in elongations_last_30], label=name_zh_dic[name])
 
         self.ax.set_ylim([-0.1, 0.1])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
         self.ax.grid(True)
         self.ax.legend()
-        self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('Elongation')
+        # self.ax.set_xlabel('Image Index')
+        self.ax.set_ylabel('拉伸率')
         self.canvas.draw()
 
 
@@ -51,16 +58,18 @@ class AreaPlotWindow(QWidget):
         start_index = max(0, data_length - 30)
         x = list(range(start_index, data_length))
 
+        name_zh_dic = {'bright_l':"左亮斑",'bright_m':"中亮斑",'bright_r':"右亮斑"}
+
         for name, areas in area_data.items():
             areas_last_30 = areas[-30:]
-            self.ax.plot(x, [area - areas[0] for area in areas_last_30], label=name, marker='o')
+            self.ax.plot(x, [area - areas[0] for area in areas_last_30], label=name_zh_dic[name], marker='o')
 
         self.ax.set_ylim([-1000, 1000])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
         self.ax.grid(True)
         self.ax.legend()
-        self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('Area')
+        # self.ax.set_xlabel('Image Index')
+        self.ax.set_ylabel('面积')
         self.canvas.draw()
 
 
@@ -83,13 +92,13 @@ class Std2minPlotWindow(QWidget):
         x = list(range(start_index, data_length))
 
         std2min_data_last_30 = std2min_data[-30:]
-        self.ax.plot(x, [std2min - std2min_data[0] for std2min in std2min_data_last_30], label='dark spot', marker='o')
-        self.ax.set_ylim([-1,1])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.plot(x, [std2min - std2min_data[0] for std2min in std2min_data_last_30], label='暗斑', marker='o')
+        self.ax.set_ylim([-1,3])
+        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
         self.ax.grid(True)
         self.ax.legend()
-        self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('Std2min')
+        # self.ax.set_xlabel('Image Index')
+        self.ax.set_ylabel('标准差/最小值')
         self.canvas.draw()
 
 
@@ -112,13 +121,13 @@ class BrightnessPlotWindow(QWidget):
         x = list(range(start_index, data_length))
 
         brightness_last_30 = brightness_data[-30:]
-        self.ax.plot(x, [bright - brightness_data[0] for bright in brightness_last_30], label='brightness', marker='o')
+        self.ax.plot(x, [bright - brightness_data[0] for bright in brightness_last_30], label='亮度', marker='o')
         self.ax.set_ylim([-20,20])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="ori")
+        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
         self.ax.grid(True)
         self.ax.legend()
-        self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('Brightness')
+        # self.ax.set_xlabel('Image Index')
+        self.ax.set_ylabel('亮度')
         self.canvas.draw()
 
 
@@ -138,10 +147,10 @@ class IntegratedPlotWindow(QMainWindow):
         self.std2min_tab = Std2minPlotWindow()
         self.brightness_tab = BrightnessPlotWindow()
 
-        self.tabs.addTab(self.elongation_tab, "Elongation")
-        self.tabs.addTab(self.area_tab, "Area")
-        self.tabs.addTab(self.std2min_tab, "Std2min")
-        self.tabs.addTab(self.brightness_tab, "Brightness")
+        self.tabs.addTab(self.elongation_tab, "拉伸率")
+        self.tabs.addTab(self.area_tab, "面积")
+        self.tabs.addTab(self.std2min_tab, "标准差/最小值")
+        self.tabs.addTab(self.brightness_tab, "亮度")
 
     def update_plots(self, elongation_data, area_data, std2min_data, brightness_data):
         self.elongation_tab.update_plot(elongation_data)

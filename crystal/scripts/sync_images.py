@@ -15,8 +15,8 @@ if system == "Windows":
     parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default=r"\\192.168.4.170\test")
     parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default=r'data\test')
 if system == "Darwin":
-    parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default="/Volumes/Avocado/crystal/73")
-    parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default="/Volumes/Avocado/crystal/test")
+    parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default="/Volumes/Avocado/crystal/data/73")
+    parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default="/Volumes/Avocado/crystal/data/test")
 
 args = parser.parse_known_args()[0]
 
@@ -34,10 +34,10 @@ def copy_images_periodically(source_folder, target_folder, interval):
                 if not os.path.exists(target_file):
                     shutil.copy2(image_file, target_file)
                     print(f"文件 {os.path.basename(image_file)} 已被复制到 {target_folder}")
+                    time.sleep(interval)          
             except:
                 print(image_file,"不存在")
-
-            time.sleep(interval)                 
+       
 
 def run():
     copy_images_periodically(args.source_folder, args.target_folder, args.interval)

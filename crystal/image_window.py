@@ -6,6 +6,8 @@ from PyQt5.QtCore import Qt,QTimer
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename
 import time
+import platform
+system = platform.system()
 
 class ImageWindow(QMainWindow):
     def __init__(self, plot_window, interval, image_coord, dark_rect):
@@ -15,37 +17,44 @@ class ImageWindow(QMainWindow):
         self.image_coord = image_coord
         self.dark_rect = dark_rect
 
+        self.is_on = True
+
         self.setWindowTitle("晶体RHEED图像分析系统")
         self.setGeometry(100, 100, 800, 600)
 
         # 创建菜单栏和菜单项
         self.menu_bar = self.menuBar()
-        file_menu = self.menu_bar.addMenu('文件')
+        # file_menu = self.menu_bar.addMenu('文件')
         analysis_menu = self.menu_bar.addMenu('分析')
-        window_menu = self.menu_bar.addMenu('视图')
+        # window_menu = self.menu_bar.addMenu('视图')
         settings_menu = self.menu_bar.addMenu('设置')
         help_menu = self.menu_bar.addMenu('帮助')
 
-        open_action = QAction('打开文件夹', self)
-        open_action.triggered.connect(self.load_images)
-        file_menu.addAction(open_action)
+        # open_action = QAction('打开文件夹', self)
+        # open_action.triggered.connect(self.load_images)
+        # file_menu.addAction(open_action)
 
-        start_analysis_action = QAction('开始分析', self)
+        start_analysis_action = QAction('启动分析', self)
+        start_analysis_action.triggered.connect(self.load_images)
         analysis_menu.addAction(start_analysis_action)
-        stop_analysis_action = QAction('停止分析', self)
+        stop_analysis_action = QAction('中止分析', self)
+        stop_analysis_action.triggered.connect(self.stop_analysis)
         analysis_menu.addAction(stop_analysis_action)
+        continue_analysis_action = QAction('继续分析', self)
+        continue_analysis_action.triggered.connect(self.continue_analysis)
+        analysis_menu.addAction(continue_analysis_action)
 
-        result_win_action = QAction('显示提示窗口', self)
-        result_win_action.triggered.connect(self.show_info_dialog)
-        window_menu.addAction(result_win_action)
-        plot_win_action = QAction('显示图表窗口', self)
-        plot_win_action.triggered.connect(lambda: self.tabs.setCurrentIndex(1))
-        window_menu.addAction(plot_win_action)
+        # result_win_action = QAction('显示提示窗口', self)
+        # result_win_action.triggered.connect(self.show_info_dialog)
+        # window_menu.addAction(result_win_action)
+        # plot_win_action = QAction('显示图表窗口', self)
+        # plot_win_action.triggered.connect(lambda: self.tabs.setCurrentIndex(1))
+        # window_menu.addAction(plot_win_action)
 
         set_param_action = QAction('设置参数', self)
         set_param_action.triggered.connect(self.open_settings_dialog)
         settings_menu.addAction(set_param_action)
-        set_sync_param_action = QAction('设置文件同步', self)
+        set_sync_param_action = QAction('设置文件路径', self)
         set_sync_param_action.triggered.connect(self.open_sync_settings_dialog)
         settings_menu.addAction(set_sync_param_action)
 
@@ -67,34 +76,41 @@ class ImageWindow(QMainWindow):
         self.imageLabel = QLabel(self)
         self.imageLabel.setScaledContents(False)
         self.imageLabel.setMinimumSize(640, 480)
-        self.imageLabel.setStyleSheet("QLabel { background-color: rgb(30, 30, 30); }")
+        self.imageLabel.setStyleSheet("QLabel { background-color: rgb(203, 204, 205); }")
         imageTabLayout.addWidget(self.imageLabel)
 
         # 右侧布局 - 按钮和文本框
         right_layout = QVBoxLayout()
-        self.openDirectoryButton = QPushButton("打开文件夹", self)
-        self.openDirectoryButton.clicked.connect(self.load_images)
+        self.startAnalysisButton = QPushButton("启动分析", self)
+        self.startAnalysisButton.clicked.connect(self.load_images)
 
-        self.analysisButton = QPushButton("图表分析", self)
-        self.analysisButton.clicked.connect(lambda: self.tabs.setCurrentIndex(1))
+        self.stopAnalysisButton = QPushButton("中止分析", self)
+        self.stopAnalysisButton.clicked.connect(self.stop_analysis)
+
+        self.continueAnalysisButton = QPushButton("继续分析", self)
+        self.continueAnalysisButton.clicked.connect(self.continue_analysis)
+        # self.analysisButton = QPushButton("图表分析", self)
+        # self.analysisButton.clicked.connect(lambda: self.tabs.setCurrentIndex(1))
 
         # self.infoButton = QPushButton("提示窗口", self)
         # self.infoButton.clicked.connect(self.show_info_dialog)
 
-        self.settingsButton = QPushButton("参数设置", self)
-        self.settingsButton.clicked.connect(self.open_settings_dialog)
+        # self.settingsButton = QPushButton("参数设置", self)
+        # self.settingsButton.clicked.connect(self.open_settings_dialog)
 
-        self.syncSettingsButton = QPushButton("文件同步设置", self)
-        self.syncSettingsButton.clicked.connect(self.open_sync_settings_dialog)
+        # self.syncSettingsButton = QPushButton("文件同步设置", self)
+        # self.syncSettingsButton.clicked.connect(self.open_sync_settings_dialog)
 
         self.exitButton = QPushButton("退出", self)
         self.exitButton.clicked.connect(self.close_application)
 
-        right_layout.addWidget(self.openDirectoryButton)
-        right_layout.addWidget(self.analysisButton)
+        right_layout.addWidget(self.startAnalysisButton)
+        right_layout.addWidget(self.stopAnalysisButton)
+        right_layout.addWidget(self.continueAnalysisButton)
+        # right_layout.addWidget(self.analysisButton)
         # right_layout.addWidget(self.infoButton)
-        right_layout.addWidget(self.settingsButton)
-        right_layout.addWidget(self.syncSettingsButton)
+        # right_layout.addWidget(self.settingsButton)
+        # right_layout.addWidget(self.syncSettingsButton)
         right_layout.addWidget(self.exitButton)    
 
         right_layout.addStretch(1)
@@ -146,9 +162,9 @@ class ImageWindow(QMainWindow):
         # 打开图表窗口
         self.plot_window.show()
 
-    def show_info_dialog(self):
+    # def show_info_dialog(self):
         # 显示分析结果窗口
-        QMessageBox.information(self, "分析结果", "这里显示分析结果。")
+        # QMessageBox.information(self, "分析结果", "这里显示分析结果。")
 
     def open_settings_dialog(self):
         # 打开设置参数对话框的逻辑
@@ -221,18 +237,18 @@ class ImageWindow(QMainWindow):
     def open_sync_settings_dialog(self):
         # 打开文件同步设置对话框的逻辑
         dialog = QDialog(self)
-        dialog.setWindowTitle("文件同步设置")
+        dialog.setWindowTitle("文件路径设置")
         layout = QFormLayout()
 
         self.read_path_input = QLineEdit(dialog)
-        self.save_path_input = QLineEdit(dialog)
+        # self.save_path_input = QLineEdit(dialog)
 
         # 如果已有路径，预填充输入框
-        self.read_path_input.setText(self.sync_read_path if self.sync_read_path else "")
-        self.save_path_input.setText(self.sync_save_path if self.sync_save_path else "")
+        self.read_path_input.setText(self.current_folder if self.current_folder else "")
+        # self.save_path_input.setText(self.sync_save_path if self.sync_save_path else "")
 
-        layout.addRow("同步文件读取路径:", self.read_path_input)
-        layout.addRow("同步文件保存路径:", self.save_path_input)
+        layout.addRow("文件读取路径:", self.read_path_input)
+        # layout.addRow("同步文件保存路径:", self.save_path_input)
 
         # 添加保存和取消按钮
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog)
@@ -245,8 +261,8 @@ class ImageWindow(QMainWindow):
 
         # 如果用户点击保存，则更新路径信息
         if result == QDialog.Accepted:
-            self.sync_read_path = self.read_path_input.text()
-            self.sync_save_path = self.save_path_input.text()
+            self.current_folder = self.read_path_input.text()
+            # self.sync_save_path = self.save_path_input.text()
 
 
     def parse_coordinate(self, text):
@@ -275,8 +291,13 @@ class ImageWindow(QMainWindow):
         开始递归展示图像
         '''
 
-        folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
-        # folder_path = './data/test'
+        # folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
+        # folder_path = r".\data\73"
+        if system == "Windows":
+            folder_path = r".\data\73"
+        if system == "Darwin":
+            folder_path = "./data/73"
+        # folder_path = "/Volumes/Avocado/crystal/data/test"
         if not folder_path:
             return
 
@@ -297,11 +318,19 @@ class ImageWindow(QMainWindow):
         '''
         自动递归更新下一张图片
         '''
-        self.current_index += 1
-        if self.current_index < len(self.images):
-            self.show_image(self.images[self.current_index])
-            QTimer.singleShot(self.interval, self.display_next_image)  
+        if self.is_on == True:
+            self.current_index += 1
+            if self.current_index < len(self.images):
+                self.show_image(self.images[self.current_index])
+                QTimer.singleShot(self.interval, self.display_next_image)
+        else:
+            QTimer.singleShot(self.interval, self.display_next_image)
 
+    def stop_analysis(self):
+        self.is_on = False
+
+    def continue_analysis(self):
+        self.is_on = True
 
     def check_for_new_images(self):
         '''
