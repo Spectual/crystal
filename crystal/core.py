@@ -28,19 +28,13 @@ def run():
 
     image_window = ImageWindow(plot_window, args.interval, args.image_coord, args.dark_rect)
 
-    # area_plot_window.show()
-    # elongation_plot_window.show()
-    # std2min_plot_window.show()
-    # brightness_plot_window.show()
-    # hist_plot_window.show()
-
     # 创建并显示启动界面
 
     # 根据操作系统选择图片路径
     if system == "Darwin":
-        splash_pix = QPixmap("/Users/spectual/Documents/Total/Project/dissertation/crystal/imgs/loading.jpg")  
+        splash_pix = QPixmap("./imgs/loading.jpg")  
     if system == "Windows":
-        splash_pix = QPixmap(r"\\Mac\Home\Documents\Total\Project\dissertation\crystal\imgs\loading.png")
+        splash_pix = QPixmap(r".\imgs\loading.png")
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     splash.showMessage("加载中...", Qt.AlignBottom | Qt.AlignCenter, Qt.white)

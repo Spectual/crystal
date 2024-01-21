@@ -81,9 +81,9 @@ def draw_and_label(contour_img, info, ellipses, rect):
         for ellipse in ellipses:
             [(ellipse_x, ellipse_y), _, _] = ellipse
             if int(ellipse_x) == int(ex) and int(ellipse_y) == int(ey):
-                cv2.drawContours(contour_img, [hull], 0, (0, 0, 255), 2)
+                # cv2.drawContours(contour_img, [hull], 0, (0, 0, 255), 2)
                 cv2.ellipse(contour_img, ellipse, (0, 255, 0), 2)
-                cv2.circle(contour_img, (int(ex), int(ey)), 5, (255, 0, 0), -1)
+                cv2.circle(contour_img, (int(ex), int(ey)), 3, (255, 0, 0), -1)
                 # cv2.putText(contour_img, name, (int(ex), int(ey - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 0, 0), 2)
                 break
 
@@ -161,23 +161,21 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data):
     formatted_time = timestamp_to_datetime(image_name)
 
     if len(info) < 3:
-        return image_filename + " " + formatted_time + "\n不正常"
+        return formatted_time + "\n不正常"
 
     if std2min_data[-1] - std2min_data[0] < -0.6:
-        return image_filename + " " + formatted_time + "\n暗斑 异常"
+        return formatted_time + "\n暗斑 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] < -800:
-        return image_filename + " " + formatted_time + "\n面积 异常"
+        return formatted_time + "\n面积 异常"
 
     if area_data['bright_l'][-1]  - area_data['bright_l'][0] > 800:
-        return image_filename + " " + formatted_time + "\n面积 异常"
+        return formatted_time + "\n面积 异常"
 
     if elongation_data['bright_r'][-1]  - elongation_data['bright_r'][0] > 0.1:
-        return image_filename + " " + formatted_time + "\n亮斑 变细"
+        return formatted_time + "\n亮斑 变细"
 
-
-
-    # area = area_data[-1] - area_data[0]
+    return False
 
 
 if __name__ == "__main__":

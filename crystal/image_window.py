@@ -1,6 +1,6 @@
 import os
 from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QLabel, QTextEdit, 
-                             QWidget, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QHBoxLayout, QFileDialog)
+                             QWidget, QTabWidget, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QHBoxLayout, QFileDialog)
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt,QTimer
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
@@ -11,11 +11,14 @@ class ImageWindow(QMainWindow):
     def __init__(self, plot_window, interval, image_coord, dark_rect):
         super().__init__()
         self.plot_window = plot_window
+        self.interval = interval
+        self.image_coord = image_coord
+        self.dark_rect = dark_rect
 
         self.setWindowTitle("晶体RHEED图像分析系统")
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(100, 100, 800, 600)
 
-        # 创建菜单栏
+        # 创建菜单栏和菜单项
         self.menu_bar = self.menuBar()
         file_menu = self.menu_bar.addMenu('文件')
         analysis_menu = self.menu_bar.addMenu('分析')
@@ -23,7 +26,6 @@ class ImageWindow(QMainWindow):
         settings_menu = self.menu_bar.addMenu('设置')
         help_menu = self.menu_bar.addMenu('帮助')
 
-        # 添加菜单项
         open_action = QAction('打开文件夹', self)
         open_action.triggered.connect(self.load_images)
         file_menu.addAction(open_action)
@@ -37,7 +39,7 @@ class ImageWindow(QMainWindow):
         result_win_action.triggered.connect(self.show_info_dialog)
         window_menu.addAction(result_win_action)
         plot_win_action = QAction('显示图表窗口', self)
-        plot_win_action.triggered.connect(self.open_plot_window)
+        plot_win_action.triggered.connect(lambda: self.tabs.setCurrentIndex(1))
         window_menu.addAction(plot_win_action)
 
         set_param_action = QAction('设置参数', self)
@@ -47,31 +49,37 @@ class ImageWindow(QMainWindow):
         set_sync_param_action.triggered.connect(self.open_sync_settings_dialog)
         settings_menu.addAction(set_sync_param_action)
 
-        user_guide_action = QAction('使用说明',self)
+        user_guide_action = QAction('使用说明', self)
         help_menu.addAction(user_guide_action)
-        about_action = QAction('关于',self)
+        about_action = QAction('关于', self)
         help_menu.addAction(about_action)
 
-        main_layout = QHBoxLayout()
+        # 主布局和标签页
+        self.tabs = QTabWidget()
+        self.imageTab = QWidget()
+        self.plotTab = self.plot_window
 
-        # 左侧布局 - 图像展示区域
+        self.tabs.addTab(self.imageTab, "图像")
+        self.tabs.addTab(self.plotTab, "图表分析")
+
+        # 图像标签页布局
+        imageTabLayout = QVBoxLayout(self.imageTab)
         self.imageLabel = QLabel(self)
-        self.imageLabel.setScaledContents(True)
-        self.imageLabel.setMinimumSize(640, 480)  # 预留图像空间
+        self.imageLabel.setScaledContents(False)
+        self.imageLabel.setMinimumSize(640, 480)
         self.imageLabel.setStyleSheet("QLabel { background-color: rgb(30, 30, 30); }")
-        main_layout.addWidget(self.imageLabel)
+        imageTabLayout.addWidget(self.imageLabel)
 
-        # 右侧布局 - 按钮
+        # 右侧布局 - 按钮和文本框
         right_layout = QVBoxLayout()
-        # 右侧布局 - 按钮
         self.openDirectoryButton = QPushButton("打开文件夹", self)
         self.openDirectoryButton.clicked.connect(self.load_images)
 
         self.analysisButton = QPushButton("图表分析", self)
-        self.analysisButton.clicked.connect(self.open_plot_window)
+        self.analysisButton.clicked.connect(lambda: self.tabs.setCurrentIndex(1))
 
-        self.infoButton = QPushButton("提示窗口", self)
-        self.infoButton.clicked.connect(self.show_info_dialog)
+        # self.infoButton = QPushButton("提示窗口", self)
+        # self.infoButton.clicked.connect(self.show_info_dialog)
 
         self.settingsButton = QPushButton("参数设置", self)
         self.settingsButton.clicked.connect(self.open_settings_dialog)
@@ -79,30 +87,45 @@ class ImageWindow(QMainWindow):
         self.syncSettingsButton = QPushButton("文件同步设置", self)
         self.syncSettingsButton.clicked.connect(self.open_sync_settings_dialog)
 
-
         self.exitButton = QPushButton("退出", self)
         self.exitButton.clicked.connect(self.close_application)
 
-        right_layout = QVBoxLayout()
         right_layout.addWidget(self.openDirectoryButton)
         right_layout.addWidget(self.analysisButton)
-        right_layout.addWidget(self.infoButton)
+        # right_layout.addWidget(self.infoButton)
         right_layout.addWidget(self.settingsButton)
         right_layout.addWidget(self.syncSettingsButton)
-        right_layout.addWidget(self.exitButton)
-        right_layout.addStretch()  # 确保按钮靠上排列
+        right_layout.addWidget(self.exitButton)    
 
+        right_layout.addStretch(1)
+
+        # 创建实时文本框用于显示分析结果
+        self.infoTextBox = QTextEdit(self)
+        self.infoTextBox.setReadOnly(True)  # 只读
+        self.infoTextBox.setMinimumSize(200, 100)
+
+        # 设置文本框的字体大小
+        font = QFont()
+        font.setPointSize(20)  # 设置字体大小
+        self.infoTextBox.setFont(font)        
+    
+        right_layout.addWidget(self.infoTextBox)
+
+        # 将标签页和按钮布局添加到主布局
+        main_layout = QHBoxLayout()
+        main_layout.addWidget(self.tabs)
         main_layout.addLayout(right_layout)
 
+        # 设置中心窗口
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
-        # 创建状态栏并存储为属性
+        # 创建状态栏
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("准备就绪")
 
-        #存放数据
+        # 存放数据和定时器代码
         self.current_folder = None
         self.images = []
         self.current_index = -1
@@ -112,14 +135,10 @@ class ImageWindow(QMainWindow):
         self.brightness_data = []
         self.processed_images = set()
 
-        # 定时器用于定期检查文件夹
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
         self.timer.start(100)  
 
-        self.interval = interval
-        self.image_coord = image_coord
-        self.dark_rect = dark_rect
         self.sync_read_path = r"\\192.168.4.170\test"
         self.sync_save_path = r"./data/test" 
 
@@ -310,8 +329,6 @@ class ImageWindow(QMainWindow):
 
     def show_image(self, image_path):
         #展示处理后的图像
-        # self.infoBox.clear()
-
         img = cut_image(image_path, self.image_coord)
         img_with_labels, info = spot_detection(img, self.dark_rect)
         std2min = compute_std_min_ratio(img, self.dark_rect)
@@ -321,7 +338,7 @@ class ImageWindow(QMainWindow):
         image_name = split_timestamp_from_filename(os.path.basename(image_path))
         formatted_time = timestamp_to_datetime(image_name)
 
-        self.status_bar.showMessage(formatted_time)
+        self.status_bar.showMessage("拍摄时间:"+formatted_time)
         self.imageLabel.setPixmap(pixmap)
         self.imageLabel.adjustSize()
 
@@ -330,17 +347,11 @@ class ImageWindow(QMainWindow):
         self.std2min_data.append(std2min)
         self.brightness_data.append(brightness)
 
+        #分析参数
         eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data)
-        # self.infoBox.append(eval_result)
+        if eval_result:
+            self.infoTextBox.append(eval_result)
 
         if image_path not in self.processed_images: 
             self.processed_images.add(image_path)  
-            # self.area_window.update_plot(self.area_data)  
-            # self.elongation_window.update_plot(self.elongation_data)
-            # self.std2min_window.update_plot(self.std2min_data)
-            # self.brightness_window.update_plot(self.brightness_data)
             self.plot_window.update_plots(self.elongation_data, self.area_data, self.std2min_data, self.brightness_data)
-            # self.hist_window.update_plot([param - self.elongation_data['bright_l'][0] for param in self.elongation_data['bright_l']])
-            # self.hist_window.update_plot([param - self.std2min_data[0] for param in self.std2min_data])
-
-
