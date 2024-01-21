@@ -115,7 +115,7 @@ class ImageWindow(QMainWindow):
         # 定时器用于定期检查文件夹
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
-        self.timer.start(1000)  
+        self.timer.start(100)  
 
         self.interval = interval
         self.image_coord = image_coord
@@ -250,6 +250,12 @@ class ImageWindow(QMainWindow):
         self.close()
 
     def load_images(self):
+        '''
+        加载图像文件夹
+        初始化参数
+        开始递归展示图像
+        '''
+
         folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
         # folder_path = './data/test'
         if not folder_path:
@@ -279,6 +285,9 @@ class ImageWindow(QMainWindow):
 
 
     def check_for_new_images(self):
+        '''
+        检查是否出现新的图像并添加
+        '''
         if not self.current_folder:
             return
 
@@ -296,7 +305,7 @@ class ImageWindow(QMainWindow):
 
         for new_image in new_unique_images:
             self.images.append(new_image)
-            self.show_image(new_image)
+            # self.show_image(new_image)
 
 
     def show_image(self, image_path):

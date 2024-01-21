@@ -14,6 +14,7 @@ def cut_image(image_path, image_area):
         img = cv2.resize(img, (640, 480))
     except:
         img = np.zeros((480, 640, 3), dtype=np.uint8)
+        print(image_path+"裁切失败")
     return img
 
 def preprocess_image(img):

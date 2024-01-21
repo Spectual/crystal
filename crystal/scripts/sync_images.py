@@ -15,8 +15,8 @@ if system == "Windows":
     parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default=r"\\192.168.4.170\test")
     parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default=r'data\test')
 if system == "Darwin":
-    parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default=r"./data/73")
-    parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default=r'./data/test')
+    parser.add_argument('-i', '--input', help='source folder', dest='source_folder', default="/Volumes/Avocado/crystal/73")
+    parser.add_argument('-o', '--output', help='target folder ', dest='target_folder', default="/Volumes/Avocado/crystal/test")
 
 args = parser.parse_known_args()[0]
 
