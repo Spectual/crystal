@@ -69,7 +69,7 @@ class ImageWindow(QMainWindow):
         self.plotTab = self.plot_window
 
         self.tabs.addTab(self.imageTab, "图像")
-        self.tabs.addTab(self.plotTab, "图表分析")
+        self.tabs.addTab(self.plotTab, "图表")
 
         # 图像标签页布局
         imageTabLayout = QVBoxLayout(self.imageTab)
@@ -328,6 +328,7 @@ class ImageWindow(QMainWindow):
 
     def stop_analysis(self):
         self.is_on = False
+        self.status_bar.showMessage("已中止")
 
     def continue_analysis(self):
         self.is_on = True

@@ -161,7 +161,7 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data):
     formatted_time = timestamp_to_datetime(image_name)
 
     if len(info) < 3:
-        return formatted_time + "\n不正常"
+        return formatted_time + "\n异常"
 
     if std2min_data[-1] - std2min_data[0] < -0.6:
         return formatted_time + "\n暗斑 异常"
