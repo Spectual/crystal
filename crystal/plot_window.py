@@ -136,6 +136,7 @@ class IntegratedPlotWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("综合图表分析")
         self.setGeometry(100, 100, 900, 600)
+        self.setMinimumSize(640,480)
 
         # 创建标签页
         self.tabs = QTabWidget(self)

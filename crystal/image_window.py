@@ -1,14 +1,17 @@
 import os
-from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QLabel, QTextEdit, 
-                             QWidget, QTabWidget, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QHBoxLayout, QFileDialog)
+
+from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QLabel, QTextEdit,
+                             QWidget, QTabWidget, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog,
+                             QLineEdit, QFormLayout, QHBoxLayout, QFileDialog, QSizePolicy, QSpacerItem)
 from PyQt5.QtGui import QPixmap, QFont
-from PyQt5.QtCore import Qt,QTimer
+from PyQt5.QtCore import Qt, QTimer, QSize, QEvent
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename
 import time
 import platform
 import numpy as np
 system = platform.system()
+
 
 class ImageWindow(QMainWindow):
     def __init__(self, plot_window, interval, image_coord, dark_rect):
@@ -21,7 +24,7 @@ class ImageWindow(QMainWindow):
         self.is_on = True
 
         self.setWindowTitle("晶体RHEED图像分析系统")
-        self.setGeometry(100, 100, 800, 600)
+        self.move(100, 100)
 
         # 创建菜单栏和菜单项
         self.menu_bar = self.menuBar()
@@ -64,15 +67,8 @@ class ImageWindow(QMainWindow):
         about_action = QAction('关于', self)
         help_menu.addAction(about_action)
 
-        # 主布局和标签页
-        self.tabs = QTabWidget()
+        # 创建图像页面的布局
         self.imageTab = QWidget()
-        self.plotTab = self.plot_window
-
-        self.tabs.addTab(self.imageTab, "图像")
-        self.tabs.addTab(self.plotTab, "图表")
-
-        # 图像标签页布局
         imageTabLayout = QVBoxLayout(self.imageTab)
         self.imageLabel = QLabel(self)
         self.imageLabel.setScaledContents(False)
@@ -80,16 +76,38 @@ class ImageWindow(QMainWindow):
         self.imageLabel.setStyleSheet("QLabel { background-color: rgb(203, 204, 205); }")
         imageTabLayout.addWidget(self.imageLabel)
 
+        # 设置垂直伸缩策略
+        self.imageTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.plot_window.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # 右侧布局 - 按钮和文本框
         right_layout = QVBoxLayout()
+
+        # 在布局中添加 200 像素的空间
+        right_layout.addSpacing(100)
+
+        button_layout = QHBoxLayout()
+        # 按钮水平布局
         self.startAnalysisButton = QPushButton("启动分析", self)
         self.startAnalysisButton.clicked.connect(self.load_images)
+        self.startAnalysisButton.setMaximumSize(300, 100)  # 设置按钮的固定大小
+        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
+        self.startAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        button_layout.addWidget(self.startAnalysisButton)
 
         self.stopAnalysisButton = QPushButton("中止分析", self)
         self.stopAnalysisButton.clicked.connect(self.stop_analysis)
+        self.stopAnalysisButton.setMaximumSize(300, 100)
+        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
+        self.stopAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        button_layout.addWidget(self.stopAnalysisButton)
 
         self.continueAnalysisButton = QPushButton("继续分析", self)
         self.continueAnalysisButton.clicked.connect(self.continue_analysis)
+        self.continueAnalysisButton.setMaximumSize(300, 100)
+        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
+        self.continueAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        button_layout.addWidget(self.continueAnalysisButton)
         # self.analysisButton = QPushButton("图表分析", self)
         # self.analysisButton.clicked.connect(lambda: self.tabs.setCurrentIndex(1))
 
@@ -104,33 +122,73 @@ class ImageWindow(QMainWindow):
 
         self.exitButton = QPushButton("退出", self)
         self.exitButton.clicked.connect(self.close_application)
+        self.exitButton.setMaximumSize(300, 100)
+        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
+        self.exitButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        button_layout.addWidget(self.exitButton)
 
-        right_layout.addWidget(self.startAnalysisButton)
-        right_layout.addWidget(self.stopAnalysisButton)
-        right_layout.addWidget(self.continueAnalysisButton)
+        # 将水平布局添加到垂直布局
+        right_layout.addLayout(button_layout)
+
+        # 在布局中添加 200 像素的空间
+        right_layout.addSpacing(200)
+
+        # right_layout.addWidget(self.startAnalysisButton)
+        # right_layout.addWidget(self.stopAnalysisButton)
+        # right_layout.addWidget(self.continueAnalysisButton)
         # right_layout.addWidget(self.analysisButton)
         # right_layout.addWidget(self.infoButton)
         # right_layout.addWidget(self.settingsButton)
         # right_layout.addWidget(self.syncSettingsButton)
-        right_layout.addWidget(self.exitButton)    
+        # right_layout.addWidget(self.exitButton)
 
-        # right_layout.addStretch(1)
+        # 创建垂直布局用于文本框
+        text_layout = QVBoxLayout()
 
         # 创建实时文本框用于显示分析结果
         self.infoTextBox = QTextEdit(self)
         self.infoTextBox.setReadOnly(True)  # 只读
         self.infoTextBox.setMinimumSize(200, 100)
+        # 设置文本框的大小策略，使其能够按比例伸缩
+        self.infoTextBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # 设置文本框的字体大小
         font = QFont()
         font.setPointSize(20)  # 设置字体大小
-        self.infoTextBox.setFont(font)        
-    
-        right_layout.addWidget(self.infoTextBox)
+        self.infoTextBox.setFont(font)
+
+        # 添加文本框到垂直布局
+        text_layout.addWidget(self.infoTextBox)
+
+        # 将垂直布局添加到右侧布局
+        right_layout.addLayout(text_layout)
+
+        # 添加 stretch 到右侧布局，用于调整按钮和文本框的比例
+        # right_layout.addStretch(1)
 
         # 将标签页和按钮布局添加到主布局
+        # main_layout = QHBoxLayout()
+        # main_layout.addWidget(self.tabs)
+        # 添加图像页面和图表页面到主窗口的布局中
+        # main_layout.addWidget(self.imageTab)
+        # main_layout.addWidget(self.plot_window)
+        # main_layout.addLayout(right_layout)
+
+        # 创建垂直布局包含图像页面
+        imageLayout = QVBoxLayout()
+        imageLayout.addWidget(self.imageTab)
+
+        # 创建垂直布局包含图表页面
+        plotLayout = QVBoxLayout()
+        plotLayout.addWidget(self.plot_window)
+
+        vertical_layout = QVBoxLayout()
+        vertical_layout.addWidget(self.imageTab)
+        vertical_layout.addWidget(self.plot_window)
+
+        # 创建水平布局包含垂直布局和right_layout
         main_layout = QHBoxLayout()
-        main_layout.addWidget(self.tabs)
+        main_layout.addLayout(vertical_layout)
         main_layout.addLayout(right_layout)
 
         # 设置中心窗口
@@ -157,7 +215,7 @@ class ImageWindow(QMainWindow):
         self.timer.start(100)  
 
         self.sync_read_path = r"\\192.168.4.170\test"
-        self.sync_save_path = r"./data/test" 
+        self.sync_save_path = r"./data/test"
 
     def open_plot_window(self):
         # 打开图表窗口
@@ -373,8 +431,19 @@ class ImageWindow(QMainWindow):
             self.status_bar.showMessage("拍摄时间:"+formatted_time)
         else:
             self.status_bar.showMessage("图像被窗口遮挡")
-        self.imageLabel.setPixmap(pixmap)
+        self.imageLabel.setPixmap(pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio))
         self.imageLabel.adjustSize()
+
+        scaled_pixmap = pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio)
+        self.imageLabel.setPixmap(scaled_pixmap)
+
+        # 获取图像居中放置的位置
+        x_pos = (self.imageLabel.width() - scaled_pixmap.width()) // 2
+        y_pos = (self.imageLabel.height() - scaled_pixmap.height()) // 2
+
+        # 设置图像的位置
+        self.imageLabel.setAlignment(Qt.AlignCenter)
+        self.imageLabel.setGeometry(x_pos, y_pos, scaled_pixmap.width(), scaled_pixmap.height())
 
         #更新参数
         update_info(info, self.area_data, self.elongation_data)
