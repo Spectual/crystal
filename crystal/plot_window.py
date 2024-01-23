@@ -24,14 +24,14 @@ class ElongationPlotWindow(QWidget):
         data_length = len(elongation_data['bright_l'])
         start_index = max(0, data_length - 30)
         x = list(range(start_index, data_length))
-        
+
         name_zh_dic = {'bright_l':"左亮斑",'bright_m':"中亮斑",'bright_r':"右亮斑"}
         
         for name, elongations in elongation_data.items():
             elongations_last_30 = elongations[-30:]
             self.ax.plot(x, [elong - elongations[0] for elong in elongations_last_30], label=name_zh_dic[name])
 
-        self.ax.set_ylim([-0.1, 0.1])
+        self.ax.set_ylim([-0.15, 0.1])
         self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
         self.ax.grid(True)
         self.ax.legend()

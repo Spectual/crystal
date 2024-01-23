@@ -7,6 +7,7 @@ from .image_processing import spot_detection, compute_std_min_ratio, spot_evalua
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename
 import time
 import platform
+import numpy as np
 system = platform.system()
 
 class ImageWindow(QMainWindow):
@@ -113,7 +114,7 @@ class ImageWindow(QMainWindow):
         # right_layout.addWidget(self.syncSettingsButton)
         right_layout.addWidget(self.exitButton)    
 
-        right_layout.addStretch(1)
+        # right_layout.addStretch(1)
 
         # 创建实时文本框用于显示分析结果
         self.infoTextBox = QTextEdit(self)
@@ -360,15 +361,18 @@ class ImageWindow(QMainWindow):
     def show_image(self, image_path):
         #展示处理后的图像
         img = cut_image(image_path, self.image_coord)
-        img_with_labels, info = spot_detection(img, self.dark_rect)
-        std2min = compute_std_min_ratio(img, self.dark_rect)
-        brightness = compute_brightness(img)
+        img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
+        std2min = compute_std_min_ratio(img, self.dark_rect) if not blocked else np.nan
+        brightness = compute_brightness(img) if not blocked else np.nan
         pixmap = convert_image_for_display(img_with_labels)
 
         image_name = split_timestamp_from_filename(os.path.basename(image_path))
         formatted_time = timestamp_to_datetime(image_name)
 
-        self.status_bar.showMessage("拍摄时间:"+formatted_time)
+        if not blocked:
+            self.status_bar.showMessage("拍摄时间:"+formatted_time)
+        else:
+            self.status_bar.showMessage("图像被窗口遮挡")
         self.imageLabel.setPixmap(pixmap)
         self.imageLabel.adjustSize()
 
@@ -378,7 +382,7 @@ class ImageWindow(QMainWindow):
         self.brightness_data.append(brightness)
 
         #分析参数
-        eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data)
+        eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data, blocked)
         if eval_result:
             self.infoTextBox.append(eval_result)
 

@@ -17,6 +17,17 @@ def cut_image(image_path, image_area):
         print(image_path+"裁切失败")
     return img
 
+def is_blocked(img):
+    '''
+    判断图像区域是否被其他窗口遮挡
+    '''
+    edges = cv2.Canny(img, 50, 150, apertureSize=3)
+
+    #检测直线
+    lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=200, maxLineGap=2)
+
+    return lines is not None
+
 def preprocess_image(img):
     '''
     图像预处理
@@ -34,16 +45,21 @@ def preprocess_image(img):
 
 def detect_and_name_spots(bin_img, img):
     '''
-    获取并返回光斑信息
+    获取并返回单张图像光斑信息
     '''
     contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contour_img = img.copy()
+
+    blocked = is_blocked(img) #判断窗口遮挡
+
     ellipses = []
     bright_spots_info = {}
     brightness = compute_brightness(img)
-    for i, cnt in enumerate(contours):
-        if len(cnt) >= 5:
-            if brightness < 150:
+
+    if not blocked:
+        for i, cnt in enumerate(contours):
+            if len(cnt) >= 5:
+                # if brightness < 150:
                 hull = cv2.convexHull(cnt)
                 ellipse = cv2.fitEllipse(hull)
                 ellipses.append(ellipse)
@@ -68,7 +84,8 @@ def detect_and_name_spots(bin_img, img):
         named_indices = {idx: name for idx, name in zip(sorted_indices, ['bright_m', 'bright_l', 'bright_r'])}
 
     info = {new: bright_spots_info[old] for old, new in named_indices.items()}
-    return contour_img, info, ellipses
+
+    return contour_img, info, ellipses, blocked
 
 
 def draw_and_label(contour_img, info, ellipses, rect):
@@ -98,11 +115,12 @@ def spot_detection(img, rect):
     光斑检测函数，返回绘制后图像、光斑信息、图像路径
     '''
     bin_img = preprocess_image(img)
-    contour_img, info, ellipses = detect_and_name_spots(bin_img, img)
-    contour_img = draw_and_label(contour_img, info, ellipses, rect)
+    contour_img, info, ellipses, blocked = detect_and_name_spots(bin_img, img)    
+    if not blocked:
+        contour_img = draw_and_label(contour_img, info, ellipses, rect)
     contour_img = cv2.cvtColor(contour_img, cv2.COLOR_BGR2RGB)
     contour_img = Image.fromarray(contour_img)
-    return contour_img, info
+    return contour_img, info, blocked
 
 def compute_std_min_ratio(img, rect):
     """
@@ -153,13 +171,16 @@ def compute_brightness(img):
 
     return weighted_avg_brightness
 
-def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data):
+def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, blocked):
 
     image_filename = os.path.basename(image_path)
     image_name = split_timestamp_from_filename(image_filename)
 
     formatted_time = timestamp_to_datetime(image_name)
 
+    if blocked:
+        return False
+        
     if len(info) < 3:
         return formatted_time + "\n异常"
 
