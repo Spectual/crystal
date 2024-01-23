@@ -49,7 +49,7 @@ def run():
 
     splash.close()
     # plot_window.show()
-    image_window.show()
+    image_window.showMaximized()
 
     sys.exit(app.exec_())
 
