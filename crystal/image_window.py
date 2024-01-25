@@ -412,7 +412,7 @@ class ImageWindow(QMainWindow):
             if system == "Windows":
                 folder_path = r".\data\73"
             if system == "Darwin":
-                folder_path = "./data/73"
+                folder_path = "./data/test"
             # folder_path = "/Volumes/Avocado/crystal/data/test"
 
         else:
@@ -439,15 +439,13 @@ class ImageWindow(QMainWindow):
         '''
         自动递归更新下一张图片
         '''
-
         if self.is_on == True:
-            self.current_index += 1
-            self.saved_index = self.current_index
-            if self.current_index < len(self.images):
+            if self.current_index < len(self.images) - 1:
+                self.current_index += 1
                 self.show_image(self.images[self.current_index])
                 QTimer.singleShot(self.interval, self.display_next_image)
-        else:
-            QTimer.singleShot(self.interval, self.display_next_image)
+
+        QTimer.singleShot(self.interval, self.display_next_image)
 
     def stop_analysis(self):
         self.is_on = False

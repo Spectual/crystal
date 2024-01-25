@@ -7,7 +7,6 @@ import time
 from .utils import timestamp_to_datetime, split_timestamp_from_filename
 
 def cut_image(image_path, image_area):
-    print(image_path)
     img = cv2.imread(image_path)
     x1, y1, x2, y2 = image_area
     try:
