@@ -34,8 +34,20 @@ def update_info(info, area_data, elongation_data):
             area_data[name].append(info[name]['area'])
             elongation_data[name].append(info[name]['elongation'])
         else:
-            elongation_data[name].append(np.nan)  
+            elongation_data[name].append(np.nan)
             area_data[name].append(np.nan)
+
+def update_first_info(info, area_data, elongation_data):
+    # 填入为第一个元素
+    detected_spots = set(info.keys())
+
+    for name in ['bright_l', 'bright_m', 'bright_r']:
+        if name in detected_spots:
+            area_data[name].insert(0, info[name]['area'])
+            elongation_data[name].insert(0, info[name]['elongation'])
+        else:
+            elongation_data[name].insert(0, np.nan)
+            area_data[name].insert(0, np.nan)
 
 def get_image_files(folder_path):
     if not folder_path:

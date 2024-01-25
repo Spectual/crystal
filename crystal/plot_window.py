@@ -37,7 +37,9 @@ class ElongationPlotWindow(QWidget):
         self.ax.legend()
         # self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('拉伸率')
-        self.canvas.draw()
+        # self.canvas.draw()
+        # 刷新图表
+        self.canvas.draw_idle()
 
 
 class AreaPlotWindow(QWidget):
@@ -70,8 +72,11 @@ class AreaPlotWindow(QWidget):
         self.ax.legend()
         # self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('面积')
-        self.canvas.draw()
-
+        # self.canvas.draw()
+        # 刷新图表
+        self.canvas.draw_idle()
+        # 实时更新图表
+        self.canvas.flush_events()
 
 class Std2minPlotWindow(QWidget):
     '''
@@ -99,7 +104,11 @@ class Std2minPlotWindow(QWidget):
         self.ax.legend()
         # self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('标准差/最小值')
-        self.canvas.draw()
+        # self.canvas.draw()
+        # 刷新图表
+        self.canvas.draw_idle()
+        # 实时更新图表
+        self.canvas.flush_events()
 
 
 class BrightnessPlotWindow(QWidget):
@@ -128,7 +137,11 @@ class BrightnessPlotWindow(QWidget):
         self.ax.legend()
         # self.ax.set_xlabel('Image Index')
         self.ax.set_ylabel('亮度')
-        self.canvas.draw()
+        # self.canvas.draw()
+        # 刷新图表
+        self.canvas.draw_idle()
+        # 实时更新图表
+        self.canvas.flush_events()
 
 
 class IntegratedPlotWindow(QMainWindow):

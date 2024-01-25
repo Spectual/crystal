@@ -1,12 +1,12 @@
 import os
-
+import glob
 from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QLabel, QTextEdit,
                              QWidget, QTabWidget, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog,
                              QLineEdit, QFormLayout, QHBoxLayout, QFileDialog, QSizePolicy, QSpacerItem)
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QSize, QEvent
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
-from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename
+from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename,update_first_info
 import time
 import platform
 import numpy as np
@@ -24,7 +24,7 @@ class ImageWindow(QMainWindow):
         self.is_on = True
 
         # 判断是否是用户选择的标准图片，以便于初始化信息而不需要展示其选择的图片
-        self.is_first = True
+        self.is_first = False
 
         # 判断用户是否选择了标准图片，选择则不清空数据
         self.is_selected = False
@@ -221,7 +221,7 @@ class ImageWindow(QMainWindow):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
-        self.timer.start(100)  
+        self.timer.start(100)
 
         self.sync_read_path = r"\\192.168.4.170\test"
         self.sync_save_path = r"./data/test"
@@ -351,13 +351,21 @@ class ImageWindow(QMainWindow):
             selected_file_path = selected_files[0]
             # 将绝对路径转换为相对路径
             relative_path = os.path.relpath(selected_file_path)
-            # 使用相对路径进行操作
-            self.show_image(relative_path)
-            self.is_first = False
-            # print(selected_file_path)
+
+            image_path = relative_path
+            img = cut_image(image_path, self.image_coord)
+            img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
+            std2min = compute_std_min_ratio(img, self.dark_rect) if not blocked else np.nan
+            brightness = compute_brightness(img) if not blocked else np.nan
+
+            # 更新参数
+            update_first_info(info, self.area_data, self.elongation_data)
+            self.std2min_data.insert(0, std2min)
+            self.brightness_data.insert(0, brightness)
+
+            # self.plot_window.update_plots(self.elongation_data, self.area_data, self.std2min_data, self.brightness_data)
         else:
             print("用户取消了选择")
-
 
     def parse_coordinate(self, text):
         """
@@ -397,7 +405,6 @@ class ImageWindow(QMainWindow):
 
         self.current_folder = folder_path
         self.images = get_image_files(folder_path)
-
         if not self.is_selected:
             #清空之前的参数
             self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
@@ -413,11 +420,15 @@ class ImageWindow(QMainWindow):
         '''
         自动递归更新下一张图片
         '''
+        self.return_normal_interval()
+
         if self.is_on == True:
             self.current_index += 1
+            self.saved_index = self.current_index
             if self.current_index < len(self.images):
                 self.show_image(self.images[self.current_index])
                 QTimer.singleShot(self.interval, self.display_next_image)
+                # print(self.interval)
         else:
             QTimer.singleShot(self.interval, self.display_next_image)
 
@@ -425,8 +436,28 @@ class ImageWindow(QMainWindow):
         self.is_on = False
         self.status_bar.showMessage("已中止")
 
+    def get_latest_file(self):
+        folder_path = r".\data\73"
+        # 获取文件夹中的所有文件
+        all_files = glob.glob(os.path.join(folder_path, '*'))
+
+        # 如果文件夹为空，返回None
+        if not all_files:
+            return None
+
+        # 按照文件的最后修改时间进行排序，最新的文件在列表的最前面
+        latest_file = max(all_files, key=os.path.getctime)
+
+        return latest_file
+
+    def return_normal_interval(self):
+        self.latest_file_path = self.get_latest_file()
+        if self.images[self.current_index] == self.latest_file_path:
+            self.interval = 100
+
     def continue_analysis(self):
         self.is_on = True
+        self.interval = 0
 
     def check_for_new_images(self):
         '''
@@ -457,30 +488,31 @@ class ImageWindow(QMainWindow):
         img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
         std2min = compute_std_min_ratio(img, self.dark_rect) if not blocked else np.nan
         brightness = compute_brightness(img) if not blocked else np.nan
-        if not self.is_first:
-            pixmap = convert_image_for_display(img_with_labels)
+        # print(brightness)
 
-            image_name = split_timestamp_from_filename(os.path.basename(image_path))
-            formatted_time = timestamp_to_datetime(image_name)
+        pixmap = convert_image_for_display(img_with_labels)
 
-            if not blocked:
-                self.status_bar.showMessage("拍摄时间:"+formatted_time)
-            else:
-                self.status_bar.showMessage("图像被窗口遮挡")
+        image_name = split_timestamp_from_filename(os.path.basename(image_path))
+        formatted_time = timestamp_to_datetime(image_name)
 
-            self.imageLabel.setPixmap(pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio))
-            self.imageLabel.adjustSize()
+        if not blocked:
+            self.status_bar.showMessage("拍摄时间:"+formatted_time)
+        else:
+            self.status_bar.showMessage("图像被窗口遮挡")
 
-            scaled_pixmap = pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio)
-            self.imageLabel.setPixmap(scaled_pixmap)
+        self.imageLabel.setPixmap(pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio))
+        self.imageLabel.adjustSize()
 
-            # 获取图像居中放置的位置
-            x_pos = (self.imageLabel.width() - scaled_pixmap.width()) // 2
-            y_pos = (self.imageLabel.height() - scaled_pixmap.height()) // 2
+        scaled_pixmap = pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio)
+        self.imageLabel.setPixmap(scaled_pixmap)
 
-            # 设置图像的位置
-            self.imageLabel.setAlignment(Qt.AlignCenter)
-            self.imageLabel.setGeometry(x_pos, y_pos, scaled_pixmap.width(), scaled_pixmap.height())
+        # 获取图像居中放置的位置
+        x_pos = (self.imageLabel.width() - scaled_pixmap.width()) // 2
+        y_pos = (self.imageLabel.height() - scaled_pixmap.height()) // 2
+
+        # 设置图像的位置
+        self.imageLabel.setAlignment(Qt.AlignCenter)
+        self.imageLabel.setGeometry(x_pos, y_pos, scaled_pixmap.width(), scaled_pixmap.height())
 
         #更新参数
         update_info(info, self.area_data, self.elongation_data)
