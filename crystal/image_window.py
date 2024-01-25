@@ -26,6 +26,9 @@ class ImageWindow(QMainWindow):
         # 判断是否是用户选择的标准图片，以便于初始化信息而不需要展示其选择的图片
         self.is_first = False
 
+        #判断是否是第一次加载文件夹
+        self.is_first_load = True
+
         # 判断用户是否选择了标准图片，选择则不清空数据
         self.is_selected = False
 
@@ -65,7 +68,7 @@ class ImageWindow(QMainWindow):
         set_param_action.triggered.connect(self.open_settings_dialog)
         settings_menu.addAction(set_param_action)
         set_sync_param_action = QAction('设置文件路径', self)
-        set_sync_param_action.triggered.connect(self.open_sync_settings_dialog)
+        set_sync_param_action.triggered.connect(self.load_images)
         settings_menu.addAction(set_sync_param_action)
         set_compare_image_action = QAction('设置对比图片路径', self)
         set_compare_image_action.triggered.connect(self.open_compare_settings_dialog)
@@ -251,6 +254,8 @@ class ImageWindow(QMainWindow):
         self.dark_rect_x2 = QLineEdit(str(self.dark_rect[2] if self.dark_rect else ""), dialog)
         self.dark_rect_y2 = QLineEdit(str(self.dark_rect[3] if self.dark_rect else ""), dialog)
 
+        self.interval_t = QLineEdit(str(self.interval / 1000 if self.interval else ""), dialog)
+
 
         # 设置输入提示
         self.image_coord_x1.setPlaceholderText("RHEED图像位置x1")
@@ -263,6 +268,8 @@ class ImageWindow(QMainWindow):
         self.dark_rect_x2.setPlaceholderText("0-640")
         self.dark_rect_y2.setPlaceholderText("0-480")
 
+        self.interval_t.setPlaceholderText("单位 秒(s)")
+
         # 设置焦点跳转
         self.image_coord_x1.returnPressed.connect(lambda: self.image_coord_y1.setFocus())
         self.image_coord_y1.returnPressed.connect(lambda: self.image_coord_x2.setFocus())
@@ -270,7 +277,8 @@ class ImageWindow(QMainWindow):
         self.image_coord_y2.returnPressed.connect(lambda: self.dark_rect_x1.setFocus())
         self.dark_rect_x1.returnPressed.connect(lambda: self.dark_rect_y1.setFocus())
         self.dark_rect_y1.returnPressed.connect(lambda: self.dark_rect_x2.setFocus())
-        self.dark_rect_x2.returnPressed.connect(lambda: self.dark_rect_y2.setFocus())        
+        self.dark_rect_x2.returnPressed.connect(lambda: self.dark_rect_y2.setFocus()) 
+        self.dark_rect_y2.returnPressed.connect(lambda: self.interval_t.setFocus()) 
 
         # 将输入框添加到布局中
         layout.addRow("图像坐标 x1:", self.image_coord_x1)
@@ -282,6 +290,8 @@ class ImageWindow(QMainWindow):
         layout.addRow("暗斑区域坐标 y1:", self.dark_rect_y1)
         layout.addRow("暗斑区域坐标 x2:", self.dark_rect_x2)
         layout.addRow("暗斑区域坐标 y2:", self.dark_rect_y2)
+
+        layout.addRow("更新图片间隔:", self.interval_t)
 
         # 添加保存和取消按钮
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog)
@@ -301,6 +311,7 @@ class ImageWindow(QMainWindow):
                               self.parse_coordinate(self.dark_rect_y1.text()),
                               self.parse_coordinate(self.dark_rect_x2.text()),
                               self.parse_coordinate(self.dark_rect_y2.text()))
+            self.interval = self.parse_coordinate(self.interval_t.text()) * 1000
 
     def open_sync_settings_dialog(self):
         # 打开文件同步设置对话框的逻辑
@@ -334,7 +345,7 @@ class ImageWindow(QMainWindow):
 
     def open_compare_settings_dialog(self):
         # 默认文件夹路径
-        folder_path = r".\data\73"
+        folder_path = self.current_folder
 
         # 打开文件对话框并设置初始目录
         file_dialog = QFileDialog(self)
@@ -395,16 +406,24 @@ class ImageWindow(QMainWindow):
 
         # folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
         # folder_path = r".\data\73"
-        if system == "Windows":
-            folder_path = r".\data\73"
-        if system == "Darwin":
-            folder_path = "./data/73"
-        # folder_path = "/Volumes/Avocado/crystal/data/test"
-        if not folder_path:
-            return
+        self.images = []
+        #如果是第一次加载则按默认路径
+        if self.is_first_load:
+            if system == "Windows":
+                folder_path = r".\data\73"
+            if system == "Darwin":
+                folder_path = "./data/73"
+            # folder_path = "/Volumes/Avocado/crystal/data/test"
+
+        else:
+            folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
+            if not folder_path:
+                return
 
         self.current_folder = folder_path
         self.images = get_image_files(folder_path)
+        self.is_first_load = False
+
         if not self.is_selected:
             #清空之前的参数
             self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
@@ -420,7 +439,6 @@ class ImageWindow(QMainWindow):
         '''
         自动递归更新下一张图片
         '''
-        self.return_normal_interval()
 
         if self.is_on == True:
             self.current_index += 1
@@ -428,7 +446,6 @@ class ImageWindow(QMainWindow):
             if self.current_index < len(self.images):
                 self.show_image(self.images[self.current_index])
                 QTimer.singleShot(self.interval, self.display_next_image)
-                # print(self.interval)
         else:
             QTimer.singleShot(self.interval, self.display_next_image)
 
@@ -436,28 +453,8 @@ class ImageWindow(QMainWindow):
         self.is_on = False
         self.status_bar.showMessage("已中止")
 
-    def get_latest_file(self):
-        folder_path = r".\data\73"
-        # 获取文件夹中的所有文件
-        all_files = glob.glob(os.path.join(folder_path, '*'))
-
-        # 如果文件夹为空，返回None
-        if not all_files:
-            return None
-
-        # 按照文件的最后修改时间进行排序，最新的文件在列表的最前面
-        latest_file = max(all_files, key=os.path.getctime)
-
-        return latest_file
-
-    def return_normal_interval(self):
-        self.latest_file_path = self.get_latest_file()
-        if self.images[self.current_index] == self.latest_file_path:
-            self.interval = 100
-
     def continue_analysis(self):
         self.is_on = True
-        self.interval = 0
 
     def check_for_new_images(self):
         '''
