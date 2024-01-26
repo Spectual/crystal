@@ -8,6 +8,8 @@ from .plot_window import AreaPlotWindow, ElongationPlotWindow, Std2minPlotWindow
 import argparse
 import time
 
+sys.setrecursionlimit(10**5)  # 设置递归最大深度 10的5次方
+
 system = platform.system()
 
 parser = argparse.ArgumentParser()

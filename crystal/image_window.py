@@ -432,18 +432,19 @@ class ImageWindow(QMainWindow):
             self.brightness_data = []
             self.current_index = -1
 
-        if self.images:
-            self.display_next_image()
+        # if self.images:
+        self.display_next_image()
 
     def display_next_image(self):
         '''
         自动递归更新下一张图片
         '''
         if self.is_on == True:
+            print(1)
             if self.current_index < len(self.images) - 1:
                 self.current_index += 1
                 self.show_image(self.images[self.current_index])
-                QTimer.singleShot(self.interval, self.display_next_image)
+                # QTimer.singleShot(self.interval, self.display_next_image)
 
         QTimer.singleShot(self.interval, self.display_next_image)
 
