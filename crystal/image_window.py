@@ -9,6 +9,7 @@ from .image_processing import spot_detection, compute_std_min_ratio, spot_evalua
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename,update_first_info
 import time
 import platform
+import uuid
 import numpy as np
 system = platform.system()
 
@@ -28,6 +29,8 @@ class ImageWindow(QMainWindow):
 
         #判断是否是第一次加载文件夹
         self.is_first_load = True
+
+        self.recursion_id = uuid.uuid4() 
 
         # 判断用户是否选择了标准图片，选择则不清空数据
         self.is_selected = False
@@ -433,20 +436,24 @@ class ImageWindow(QMainWindow):
             self.current_index = -1
 
         # if self.images:
-        self.display_next_image()
+        self.recursion_id = uuid.uuid4()  # 开始新的图片加载时更新标识符
+        self.display_next_image(self.recursion_id)  # 传递当前标识符
 
-    def display_next_image(self):
+    def display_next_image(self, current_id):
         '''
         自动递归更新下一张图片
         '''
+        # 检查是否还在当前递归序列中
+        if current_id != self.recursion_id:
+            return  # 如果不是，停止当前的递归调用
+
         if self.is_on == True:
-            print(1)
             if self.current_index < len(self.images) - 1:
                 self.current_index += 1
                 self.show_image(self.images[self.current_index])
                 # QTimer.singleShot(self.interval, self.display_next_image)
 
-        QTimer.singleShot(self.interval, self.display_next_image)
+        QTimer.singleShot(self.interval, lambda:self.display_next_image(current_id))
 
     def stop_analysis(self):
         self.is_on = False
