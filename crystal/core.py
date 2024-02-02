@@ -13,7 +13,7 @@ sys.setrecursionlimit(10**5)  # 设置递归最大深度 10的5次方
 system = platform.system()
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=100)
+parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=1000)
 parser.add_argument('-a', '--image-area', nargs=4, help='image coord', dest='image_coord', type=int, default=(950, 143, 1430, 495))
 parser.add_argument('-d', '--dark-rect', nargs=4, help='dark area coord', dest='dark_rect', type=int, default=(204,60,204+330,60+74))
 
@@ -21,10 +21,10 @@ args = parser.parse_known_args()[0]
 
 def run():
     app = QApplication(sys.argv)
-    area_plot_window = AreaPlotWindow()
-    elongation_plot_window = ElongationPlotWindow()
-    std2min_plot_window = Std2minPlotWindow()
-    brightness_plot_window = BrightnessPlotWindow()
+    # area_plot_window = AreaPlotWindow()
+    # elongation_plot_window = ElongationPlotWindow()
+    # std2min_plot_window = Std2minPlotWindow()
+    # brightness_plot_window = BrightnessPlotWindow()
     plot_window = IntegratedPlotWindow()
     # hist_plot_window = HistPlotWindow()
 

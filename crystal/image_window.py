@@ -314,7 +314,7 @@ class ImageWindow(QMainWindow):
                               self.parse_coordinate(self.dark_rect_y1.text()),
                               self.parse_coordinate(self.dark_rect_x2.text()),
                               self.parse_coordinate(self.dark_rect_y2.text()))
-            self.interval = float(self.interval_t.text()) * 1000
+            self.interval = max(10, float(self.interval_t.text()) * 1000)
 
     def open_sync_settings_dialog(self):
         # 打开文件同步设置对话框的逻辑

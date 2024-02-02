@@ -1,159 +1,129 @@
 from PyQt5.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib.pyplot as plt
-from matplotlib import rcParams
+from pyqtgraph import PlotWidget, mkPen, InfiniteLine
+import pyqtgraph as pg
+from PyQt5.QtGui import QColor, QFont
 
-# 指定中文字体
-rcParams['font.sans-serif'] = ['SimHei']  # 指定默认字体
-rcParams['axes.unicode_minus'] = False  # 解决保存图像时负号'-'显示为方块的问题
 
-class ElongationPlotWindow(QWidget):
-    '''
-    绘制各光斑Elongation变化图表
-    '''
-    def __init__(self):
+class PlotWindowBase(QWidget):
+    def __init__(self, title, y_axis_label):
         super().__init__()
-        self.fig, self.ax = plt.subplots(figsize=(6, 4))
-        self.canvas = FigureCanvas(self.fig)
+        self.plot_widget = PlotWidget()
+        self.plot_widget.setTitle(title, size='10pt')
+        # self.plot_widget.setLabel('left', y_axis_label, size='5pt')
+        self.plot_widget.showGrid(x=True, y=True)
+        self.plot_widget.setBackground('#EBECEE')  # 设置背景颜色为白色
+        self.plot_widget.getAxis('left').setLabel(y_axis_label, color='r', size='10pt')
+        self.plot_widget.getAxis('bottom').setStyle(tickFont=QFont("Arial", 10))
+        self.plot_widget.getAxis('left').setStyle(tickFont=QFont("Arial", 10))
 
         layout = QVBoxLayout(self)
-        layout.addWidget(self.canvas)
+        layout.addWidget(self.plot_widget)
 
-    def update_plot(self, elongation_data):
-        self.ax.clear()
-        data_length = len(elongation_data['bright_l'])
+        # 用于存储数据的字典
+        self.data_dict = {}
+
+        # 预定义一些颜色
+        self.colors = ['#4B89C1', '#DD4444', '#479776', 'c', 'm', 'y']
+
+        # 用于控制绘图更新的标志
+        self.updated = False
+
+    def update_plot(self, data):
+        self.updated = True
+        self.data_dict = data
+        self.plot_widget.clear()
+        self.plot_data()
+        # 添加基准线
+        self.add_baseline()
+
+    def add_baseline(self):
+        baseline = InfiniteLine(pos=0, angle=0, pen=mkPen('r', width=2, style=pg.QtCore.Qt.DashLine))
+        self.plot_widget.addItem(baseline)
+
+    def plot_data(self):
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+class ElongationPlotWindow(PlotWindowBase):
+    def __init__(self):
+        super().__init__("拉伸率变化", "拉伸率")
+        self.plot_widget.setYRange(-0.15, 0.1)
+
+    def plot_data(self):
+        data_length = len(self.data_dict['bright_l'])
         start_index = max(0, data_length - 30)
-        x = list(range(start_index, data_length))
+        x = range(start_index, data_length)
 
-        name_zh_dic = {'bright_l':"左亮斑",'bright_m':"中亮斑",'bright_r':"右亮斑"}
-        
-        for name, elongations in elongation_data.items():
+        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
+
+        for idx, (name, elongations) in enumerate(self.data_dict.items()):
             elongations_last_30 = elongations[-30:]
-            self.ax.plot(x, [elong - elongations[0] for elong in elongations_last_30], label=name_zh_dic[name])
+            self.plot_widget.plot(x, [elong - elongations[0] for elong in elongations_last_30], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
 
-        self.ax.set_ylim([-0.15, 0.1])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
-        self.ax.grid(True)
-        self.ax.legend()
-        # self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('拉伸率')
-        # self.canvas.draw()
-        # 刷新图表
-        self.canvas.draw_idle()
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
-
-class AreaPlotWindow(QWidget):
-    '''
-    绘制各光斑Area变化图表
-    '''
+class AreaPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__()
-        self.fig, self.ax = plt.subplots(figsize=(6, 4))
-        self.canvas = FigureCanvas(self.fig)
+        super().__init__("面积变化", "面积")
+        self.plot_widget.setYRange(-1000, 1000)
 
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.canvas)
-
-    def update_plot(self, area_data):
-        self.ax.clear()
-        data_length = len(area_data['bright_l'])
+    def plot_data(self):
+        data_length = len(self.data_dict['bright_l'])
         start_index = max(0, data_length - 30)
-        x = list(range(start_index, data_length))
+        x = range(start_index, data_length)
 
-        name_zh_dic = {'bright_l':"左亮斑",'bright_m':"中亮斑",'bright_r':"右亮斑"}
+        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
 
-        for name, areas in area_data.items():
+        for idx, (name, areas) in enumerate(self.data_dict.items()):
             areas_last_30 = areas[-30:]
-            self.ax.plot(x, [area - areas[0] for area in areas_last_30], label=name_zh_dic[name], marker='o')
+            self.plot_widget.plot(x, [area - areas[0] for area in areas_last_30], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
+        
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
-        self.ax.set_ylim([-1000, 1000])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
-        self.ax.grid(True)
-        self.ax.legend()
-        # self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('面积')
-        # self.canvas.draw()
-        # 刷新图表
-        self.canvas.draw_idle()
-        # 实时更新图表
-        # self.canvas.flush_events()
-
-class Std2minPlotWindow(QWidget):
-    '''
-    绘制暗斑区域参数变化图表
-    '''
+class Std2minPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__()
-        self.fig, self.ax = plt.subplots(figsize=(6, 4))
-        self.canvas = FigureCanvas(self.fig)
+        super().__init__("标准差/最小值变化", "标准差/最小值")
+        self.plot_widget.setYRange(-1, 3)
 
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.canvas)
-
-    def update_plot(self, std2min_data):
-        self.ax.clear()
-        data_length = len(std2min_data)
+    def plot_data(self):
+        data_length = len(self.data_dict)
         start_index = max(0, data_length - 30)
-        x = list(range(start_index, data_length))
+        x = range(start_index, data_length)
 
-        std2min_data_last_30 = std2min_data[-30:]
-        self.ax.plot(x, [std2min - std2min_data[0] for std2min in std2min_data_last_30], label='暗斑', marker='o')
-        self.ax.set_ylim([-1,3])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
-        self.ax.grid(True)
-        self.ax.legend()
-        # self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('标准差/最小值')
-        # self.canvas.draw()
-        # 刷新图表
-        self.canvas.draw_idle()
-        # 实时更新图表
-        # self.canvas.flush_events()
+        std2min_data_last_30 = self.data_dict[-30:]
+        self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
 
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
-class BrightnessPlotWindow(QWidget):
-    '''
-    绘制亮度参数变化图表
-    '''
+class BrightnessPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__()
-        self.fig, self.ax = plt.subplots(figsize=(6, 4))
-        self.canvas = FigureCanvas(self.fig)
+        super().__init__("亮度变化", "亮度")
+        self.plot_widget.setYRange(-20, 20)
 
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.canvas)
-
-    def update_plot(self, brightness_data):
-        self.ax.clear()
-        data_length = len(brightness_data)
+    def plot_data(self):
+        data_length = len(self.data_dict)
         start_index = max(0, data_length - 30)
-        x = list(range(start_index, data_length))
+        x = range(start_index, data_length)
 
-        brightness_last_30 = brightness_data[-30:]
-        self.ax.plot(x, [bright - brightness_data[0] for bright in brightness_last_30], label='亮度', marker='o')
-        self.ax.set_ylim([-20,20])
-        self.ax.axhline(y=0, color='r', linestyle='--', label="参照线")
-        self.ax.grid(True)
-        self.ax.legend()
-        # self.ax.set_xlabel('Image Index')
-        self.ax.set_ylabel('亮度')
-        # self.canvas.draw()
-        # 刷新图表
-        self.canvas.draw_idle()
-        # 实时更新图表
-        # self.canvas.flush_events()
+        brightness_last_30 = self.data_dict[-30:]
+        self.plot_widget.plot(x, [bright - self.data_dict[0] for bright in brightness_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='亮度')
 
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
-class IntegratedPlotWindow(QMainWindow):
+class IntegratedPlotWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("综合图表分析")
         self.setGeometry(100, 100, 900, 600)
-        self.setMinimumSize(640,480)
+        self.setMinimumSize(640, 480)
 
         # 创建标签页
         self.tabs = QTabWidget(self)
-        self.setCentralWidget(self.tabs)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.tabs)
 
         # 添加各个图表到标签页
         self.elongation_tab = ElongationPlotWindow()
@@ -171,30 +141,3 @@ class IntegratedPlotWindow(QMainWindow):
         self.area_tab.update_plot(area_data)
         self.std2min_tab.update_plot(std2min_data)
         self.brightness_tab.update_plot(brightness_data)
-
-# class HistPlotWindow(QMainWindow):
-#     '''
-#     绘制暗斑区域参数变化图表
-#     '''
-#     def __init__(self):
-#         super().__init__()
-
-#         self.setWindowTitle("Hist of Params")
-#         self.setGeometry(1300, 100, 600, 400)
-
-#         self.fig, self.ax = plt.subplots(figsize=(6, 4))
-#         self.canvas = FigureCanvas(self.fig)
-#         self.setCentralWidget(self.canvas)
-
-#     def update_plot(self, param_data):
-#         self.ax.clear()
-
-#         bin_width = 0.1
-#         bins = np.arange(min(param_data), max(param_data) + bin_width, bin_width)
-
-#         self.ax.hist(param_data, bins=bins, label='param')
-#         self.ax.legend(labels = 'param')
-#         self.ax.set_xlabel('Value Intervals')
-#         self.ax.set_ylabel('Frequency')
-#         self.canvas.draw()
-
