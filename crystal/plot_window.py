@@ -76,7 +76,7 @@ class AreaPlotWindow(QWidget):
         # 刷新图表
         self.canvas.draw_idle()
         # 实时更新图表
-        self.canvas.flush_events()
+        # self.canvas.flush_events()
 
 class Std2minPlotWindow(QWidget):
     '''
@@ -108,7 +108,7 @@ class Std2minPlotWindow(QWidget):
         # 刷新图表
         self.canvas.draw_idle()
         # 实时更新图表
-        self.canvas.flush_events()
+        # self.canvas.flush_events()
 
 
 class BrightnessPlotWindow(QWidget):
@@ -141,7 +141,7 @@ class BrightnessPlotWindow(QWidget):
         # 刷新图表
         self.canvas.draw_idle()
         # 实时更新图表
-        self.canvas.flush_events()
+        # self.canvas.flush_events()
 
 
 class IntegratedPlotWindow(QMainWindow):
