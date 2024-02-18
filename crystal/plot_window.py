@@ -1,11 +1,12 @@
-from PyQt5.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QTabWidget, QWidget, QVBoxLayout, QPushButton
 from pyqtgraph import PlotWidget, mkPen, InfiniteLine
 import pyqtgraph as pg
+from pyqtgraph.exporters import ImageExporter
 from PyQt5.QtGui import QColor, QFont
 
 
 class PlotWindowBase(QWidget):
-    def __init__(self, title, y_axis_label):
+    def __init__(self, title, y_axis_label, fileNamePrefix="plot"):
         super().__init__()
         self.plot_widget = PlotWidget()
         self.plot_widget.setTitle(title, size='10pt')
@@ -16,8 +17,11 @@ class PlotWindowBase(QWidget):
         self.plot_widget.getAxis('bottom').setStyle(tickFont=QFont("Arial", 10))
         self.plot_widget.getAxis('left').setStyle(tickFont=QFont("Arial", 10))
 
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.plot_widget)
+        self.layout = QVBoxLayout(self)
+        self.layout.addWidget(self.plot_widget)
+
+        #文件名前缀
+        self.fileNamePrefix = fileNamePrefix 
 
         # 用于存储数据的字典
         self.data_dict = {}
@@ -25,11 +29,13 @@ class PlotWindowBase(QWidget):
         # 预定义一些颜色
         self.colors = ['#4B89C1', '#DD4444', '#479776', 'c', 'm', 'y']
 
-        # 用于控制绘图更新的标志
-        self.updated = False
+        # 添加保存按钮
+        self.saveButton = QPushButton('保存图表', self)
+        self.layout.addWidget(self.saveButton)
+        self.saveButton.clicked.connect(self.savePlot)
+
 
     def update_plot(self, data):
-        self.updated = True
         self.data_dict = data
         self.plot_widget.clear()
         self.plot_data()
@@ -43,10 +49,37 @@ class PlotWindowBase(QWidget):
     def plot_data(self):
         raise NotImplementedError("This method should be implemented by subclasses.")
 
+    def plot_all_data(self):
+        # 此方法应在子类中实现，用于绘制所有数据点
+        pass
+
+    def savePlot(self):
+        fileName = f"{self.fileNamePrefix}_plot.png"  # 使用文件名前缀构建文件名
+        
+        exporter = ImageExporter(self.plot_widget.plotItem)
+        self.plot_widget.clear()
+        self.plot_all_data()  # 确保在子类中实现该方法
+        exporter.export(fileName)
+        self.plot_data()  # 恢复图表显示最后30个点
+
+        print(f"图表已保存为: {fileName}")
+
 class ElongationPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__("拉伸率变化", "拉伸率")
+        super().__init__("拉伸率变化", "拉伸率", "elongation")
         self.plot_widget.setYRange(-0.15, 0.1)
+
+    def plot_all_data(self):
+        data_length = len(self.data_dict['bright_l'])
+        start_index = max(0, data_length - 30)
+        x = range(start_index, data_length)
+
+        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
+        for idx, (name, elongations) in enumerate(self.data_dict.items()):
+            x = range(len(elongations))
+            self.plot_widget.plot(x, [elong - elongations[0] for elong in elongations], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
     def plot_data(self):
         data_length = len(self.data_dict['bright_l'])
@@ -64,8 +97,22 @@ class ElongationPlotWindow(PlotWindowBase):
 
 class AreaPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__("面积变化", "面积")
+        super().__init__("面积变化", "面积", "area")
         self.plot_widget.setYRange(-1000, 1000)
+
+    def plot_all_data(self):
+        data_length = len(self.data_dict['bright_l'])
+        start_index = max(0, data_length - 30)
+        x = range(start_index, data_length)
+
+        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
+
+        for idx, (name, areas) in enumerate(self.data_dict.items()):
+            x = range(len(areas))
+            self.plot_widget.plot(x, [area - areas[0] for area in areas], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
+        
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
     def plot_data(self):
         data_length = len(self.data_dict['bright_l'])
@@ -83,8 +130,18 @@ class AreaPlotWindow(PlotWindowBase):
 
 class Std2minPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__("标准差/最小值变化", "标准差/最小值")
+        super().__init__("标准差/最小值变化", "标准差/最小值", "std2min")
         self.plot_widget.setYRange(-1, 3)
+
+    def plot_all_data(self):
+        data_length = len(self.data_dict)
+        start_index = max(0, data_length - 30)
+        x = range(len(self.data_dict))
+
+        self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in self.data_dict], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
+
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
     def plot_data(self):
         data_length = len(self.data_dict)
@@ -99,8 +156,18 @@ class Std2minPlotWindow(PlotWindowBase):
 
 class BrightnessPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__("亮度变化", "亮度")
+        super().__init__("亮度变化", "亮度", "brightness")
         self.plot_widget.setYRange(-20, 20)
+
+    def plot_all_data(self):
+        data_length = len(self.data_dict)
+        start_index = max(0, data_length - 30)
+        x = range(len(self.data_dict))
+
+        self.plot_widget.plot(x, [bright - self.data_dict[0] for bright in self.data_dict], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='亮度')
+
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
 
     def plot_data(self):
         data_length = len(self.data_dict)

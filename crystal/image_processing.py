@@ -7,12 +7,17 @@ import time
 from .utils import timestamp_to_datetime, split_timestamp_from_filename
 
 def cut_image(image_path, image_area):
+    print("---",image_path)
     img = cv2.imread(image_path)
+    print(len(img))
+    print("---")
     x1, y1, x2, y2 = image_area
     try:
         img = img[y1:y2, x1:x2]
         img = cv2.resize(img, (640, 480))
     except:
+        time.sleep(3)
+        img = cv2.imread(image_path)
         img = np.zeros((480, 640, 3), dtype=np.uint8)
         print(image_path+"裁切失败")
     return img

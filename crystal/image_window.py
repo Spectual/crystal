@@ -46,10 +46,6 @@ class ImageWindow(QMainWindow):
         settings_menu = self.menu_bar.addMenu('设置')
         help_menu = self.menu_bar.addMenu('帮助')
 
-        # open_action = QAction('打开文件夹', self)
-        # open_action.triggered.connect(self.load_images)
-        # file_menu.addAction(open_action)
-
         start_analysis_action = QAction('启动分析', self)
         start_analysis_action.triggered.connect(self.load_images)
         analysis_menu.addAction(start_analysis_action)
@@ -59,13 +55,6 @@ class ImageWindow(QMainWindow):
         continue_analysis_action = QAction('继续分析', self)
         continue_analysis_action.triggered.connect(self.continue_analysis)
         analysis_menu.addAction(continue_analysis_action)
-
-        # result_win_action = QAction('显示提示窗口', self)
-        # result_win_action.triggered.connect(self.show_info_dialog)
-        # window_menu.addAction(result_win_action)
-        # plot_win_action = QAction('显示图表窗口', self)
-        # plot_win_action.triggered.connect(lambda: self.tabs.setCurrentIndex(1))
-        # window_menu.addAction(plot_win_action)
 
         set_param_action = QAction('设置参数', self)
         set_param_action.triggered.connect(self.open_settings_dialog)
@@ -123,17 +112,6 @@ class ImageWindow(QMainWindow):
         # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
         self.continueAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         button_layout.addWidget(self.continueAnalysisButton)
-        # self.analysisButton = QPushButton("图表分析", self)
-        # self.analysisButton.clicked.connect(lambda: self.tabs.setCurrentIndex(1))
-
-        # self.infoButton = QPushButton("提示窗口", self)
-        # self.infoButton.clicked.connect(self.show_info_dialog)
-
-        # self.settingsButton = QPushButton("参数设置", self)
-        # self.settingsButton.clicked.connect(self.open_settings_dialog)
-
-        # self.syncSettingsButton = QPushButton("文件同步设置", self)
-        # self.syncSettingsButton.clicked.connect(self.open_sync_settings_dialog)
 
         self.exitButton = QPushButton("退出", self)
         self.exitButton.clicked.connect(self.close_application)
@@ -147,15 +125,6 @@ class ImageWindow(QMainWindow):
 
         # 在布局中添加 200 像素的空间
         right_layout.addSpacing(200)
-
-        # right_layout.addWidget(self.startAnalysisButton)
-        # right_layout.addWidget(self.stopAnalysisButton)
-        # right_layout.addWidget(self.continueAnalysisButton)
-        # right_layout.addWidget(self.analysisButton)
-        # right_layout.addWidget(self.infoButton)
-        # right_layout.addWidget(self.settingsButton)
-        # right_layout.addWidget(self.syncSettingsButton)
-        # right_layout.addWidget(self.exitButton)
 
         # 创建垂直布局用于文本框
         text_layout = QVBoxLayout()
@@ -177,17 +146,6 @@ class ImageWindow(QMainWindow):
 
         # 将垂直布局添加到右侧布局
         right_layout.addLayout(text_layout)
-
-        # 添加 stretch 到右侧布局，用于调整按钮和文本框的比例
-        # right_layout.addStretch(1)
-
-        # 将标签页和按钮布局添加到主布局
-        # main_layout = QHBoxLayout()
-        # main_layout.addWidget(self.tabs)
-        # 添加图像页面和图表页面到主窗口的布局中
-        # main_layout.addWidget(self.imageTab)
-        # main_layout.addWidget(self.plot_window)
-        # main_layout.addLayout(right_layout)
 
         # 创建垂直布局包含图像页面
         imageLayout = QVBoxLayout()
@@ -227,7 +185,7 @@ class ImageWindow(QMainWindow):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
-        self.timer.start(100)
+        self.timer.start(1000)
 
         self.sync_read_path = r"\\192.168.4.170\test"
         self.sync_save_path = r"./data/test"
@@ -427,13 +385,13 @@ class ImageWindow(QMainWindow):
         self.images = get_image_files(folder_path)
         self.is_first_load = False
 
-        if not self.is_selected:
-            #清空之前的参数
-            self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
-            self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
-            self.std2min_data = []
-            self.brightness_data = []
-            self.current_index = -1
+        # if not self.is_selected:
+        #清空之前的参数
+        self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
+        self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
+        self.std2min_data = []
+        self.brightness_data = []
+        self.current_index = -1
 
         # if self.images:
         self.recursion_id = uuid.uuid4()  # 开始新的图片加载时更新标识符
@@ -473,12 +431,6 @@ class ImageWindow(QMainWindow):
         if not new_images:
             return
 
-        # if len(new_images) > len(self.images):
-        #     for new_image in new_images[len(self.images):]:
-        #         self.images.append(new_image)
-        #         self.show_image(new_image)
-
-
         new_unique_images = [img for img in new_images if img not in self.images]
 
         for new_image in new_unique_images:
@@ -491,7 +443,6 @@ class ImageWindow(QMainWindow):
         img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
         std2min = compute_std_min_ratio(img, self.dark_rect) if not blocked else np.nan
         brightness = compute_brightness(img) if not blocked else np.nan
-        # print(brightness)
 
         pixmap = convert_image_for_display(img_with_labels)
 
