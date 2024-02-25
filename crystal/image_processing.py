@@ -6,8 +6,9 @@ from PIL import Image
 import time
 from .utils import timestamp_to_datetime, split_timestamp_from_filename
 
+
 def cut_image(image_path, image_area):
-    print("---",image_path)
+    print("---", image_path)
     img = cv2.imread(image_path)
     print(len(img))
     print("---")
@@ -19,19 +20,44 @@ def cut_image(image_path, image_area):
         time.sleep(3)
         img = cv2.imread(image_path)
         img = np.zeros((480, 640, 3), dtype=np.uint8)
-        print(image_path+"裁切失败")
+        print(image_path + "裁切失败")
     return img
 
-def is_blocked(img):
-    '''
-    判断图像区域是否被其他窗口遮挡
-    '''
+
+'''def is_blocked(img):
+    # 判断图像区域是否被其他窗口遮挡
+
     edges = cv2.Canny(img, 50, 150, apertureSize=3)
 
-    #检测直线
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, 100, minLineLength=200, maxLineGap=2)
+    # 检测直线
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=200, maxLineGap=2)
 
     return lines is not None
+'''
+
+
+def is_blocked(img):
+    # 获取图像的尺寸
+    height, width = img.shape[:2]
+
+    # 计算右上方70%区域的坐标
+    top_row = int(height * 0.05)  # 从顶部5%开始到80%的高度
+    bottom_row = int(height * 0.8)
+    left_col = int(width * 0.2)  # 从左侧20%开始到95%宽度，这样就是右侧70%的宽度
+    right_col = int(width * 0.95)
+
+    # 提取右上方70%的区域
+    roi = img[top_row:bottom_row, left_col:right_col]
+
+    # 在ROI上应用边缘检测
+    edges = cv2.Canny(roi, 50, 150, apertureSize=3)
+
+    # 在边缘检测后的图像中检测直线
+    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=200, maxLineGap=10)
+
+    # 返回是否检测到直线
+    return lines is not None
+
 
 def preprocess_image(img):
     '''
@@ -48,6 +74,7 @@ def preprocess_image(img):
     bin_img = opening
     return bin_img
 
+
 def detect_and_name_spots(bin_img, img):
     '''
     获取并返回单张图像光斑信息
@@ -55,7 +82,7 @@ def detect_and_name_spots(bin_img, img):
     contours, _ = cv2.findContours(bin_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contour_img = img.copy()
 
-    blocked = is_blocked(img) #判断窗口遮挡
+    blocked = is_blocked(img)  # 判断窗口遮挡
 
     ellipses = []
     bright_spots_info = {}
@@ -77,7 +104,7 @@ def detect_and_name_spots(bin_img, img):
                         "centroid": (ex, ey),
                         "area": area,
                         "elongation": elongation,
-                        "convex":hull
+                        "convex": hull
                     }
 
     num_spots = len(bright_spots_info)
@@ -120,12 +147,13 @@ def spot_detection(img, rect):
     光斑检测函数，返回绘制后图像、光斑信息、图像路径
     '''
     bin_img = preprocess_image(img)
-    contour_img, info, ellipses, blocked = detect_and_name_spots(bin_img, img)    
+    contour_img, info, ellipses, blocked = detect_and_name_spots(bin_img, img)
     if not blocked:
         contour_img = draw_and_label(contour_img, info, ellipses, rect)
     contour_img = cv2.cvtColor(contour_img, cv2.COLOR_BGR2RGB)
     contour_img = Image.fromarray(contour_img)
     return contour_img, info, blocked
+
 
 def compute_std_min_ratio(img, rect):
     """
@@ -136,7 +164,7 @@ def compute_std_min_ratio(img, rect):
     :param rect: A tuple (x1, y1, x2, y2) 
     :return: Ratio of the standard deviation to the minimum grayscale value in the region.
     """
-    image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)   
+    image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     x1, y1, x2, y2 = rect
     sub_image = image[y1:y2, x1:x2]
     hist = cv2.calcHist([sub_image], [0], None, [256], [0, 256]).flatten()
@@ -149,7 +177,6 @@ def compute_std_min_ratio(img, rect):
 
 
 def compute_brightness(img):
-
     image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     mask = (image > 10)
 
@@ -166,8 +193,8 @@ def compute_brightness(img):
     middle_brightness = np.mean(middle_part) if middle_part.size > 0 else 0
     overall_brightness = np.mean(filtered_image) if filtered_image.size > 0 else 0
 
-    upper_weight = 0.4  
-    middle_weight = 0.4 
+    upper_weight = 0.4
+    middle_weight = 0.4
     overall_weight = 0.2
 
     weighted_avg_brightness = (upper_brightness * upper_weight +
@@ -176,8 +203,8 @@ def compute_brightness(img):
 
     return weighted_avg_brightness
 
-def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, blocked):
 
+def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, blocked):
     image_filename = os.path.basename(image_path)
     image_name = split_timestamp_from_filename(image_filename)
 
@@ -185,20 +212,20 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, 
 
     if blocked:
         return False
-        
+
     if len(info) < 3:
         return formatted_time + "\n异常"
 
     if std2min_data[-1] - std2min_data[0] < -0.6:
         return formatted_time + "\n暗斑 异常"
 
-    if area_data['bright_l'][-1]  - area_data['bright_l'][0] < -800:
+    if area_data['bright_l'][-1] - area_data['bright_l'][0] < -800:
         return formatted_time + "\n面积 异常"
 
-    if area_data['bright_l'][-1]  - area_data['bright_l'][0] > 800:
+    if area_data['bright_l'][-1] - area_data['bright_l'][0] > 800:
         return formatted_time + "\n面积 异常"
 
-    if elongation_data['bright_r'][-1]  - elongation_data['bright_r'][0] > 0.1:
+    if elongation_data['bright_r'][-1] - elongation_data['bright_r'][0] > 0.1:
         return formatted_time + "\n亮斑 变细"
 
     return False

@@ -371,7 +371,7 @@ class ImageWindow(QMainWindow):
         #如果是第一次加载则按默认路径
         if self.is_first_load:
             if system == "Windows":
-                folder_path = r".\data\73"
+                folder_path = r".\data\test"
             if system == "Darwin":
                 folder_path = "./data/test"
             # folder_path = "/Volumes/Avocado/crystal/data/test"
