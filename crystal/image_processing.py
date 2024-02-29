@@ -173,7 +173,7 @@ def compute_std_min_ratio(img, rect):
     if min_val == 0:
         return float('inf')
 
-    return std_dev / min_val
+    return std_dev
 
 
 def compute_brightness(img):
@@ -203,11 +203,9 @@ def compute_brightness(img):
 
     return weighted_avg_brightness
 
-
-def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, blocked):
+def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, blocked, settings):
     image_filename = os.path.basename(image_path)
     image_name = split_timestamp_from_filename(image_filename)
-
     formatted_time = timestamp_to_datetime(image_name)
 
     if blocked:
@@ -216,20 +214,19 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, 
     if len(info) < 3:
         return formatted_time + "\n异常"
 
-    if std2min_data[-1] - std2min_data[0] < -0.6:
+    if std2min_data[-1] - std2min_data[0] < settings['std_min_lower_threshold']:
         return formatted_time + "\n暗斑 异常"
 
-    if area_data['bright_l'][-1] - area_data['bright_l'][0] < -800:
+    if area_data['bright_l'][-1] - area_data['bright_l'][0] < settings['area_lower_threshold']:
         return formatted_time + "\n面积 异常"
 
-    if area_data['bright_l'][-1] - area_data['bright_l'][0] > 800:
+    if area_data['bright_l'][-1] - area_data['bright_l'][0] > settings['area_upper_threshold']:
         return formatted_time + "\n面积 异常"
 
-    if elongation_data['bright_r'][-1] - elongation_data['bright_r'][0] > 0.1:
+    if elongation_data['bright_r'][-1] - elongation_data['bright_r'][0] > settings['elongation_upper_threshold']:
         return formatted_time + "\n亮斑 变细"
 
     return False
-
 
 if __name__ == "__main__":
     img_path = './data/455-1.png'

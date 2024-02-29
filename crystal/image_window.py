@@ -1,6 +1,6 @@
 import os
 import glob
-from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QLabel, QTextEdit,
+from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QTextEdit,
                              QWidget, QTabWidget, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog,
                              QLineEdit, QFormLayout, QHBoxLayout, QFileDialog, QSizePolicy, QSpacerItem)
 from PyQt5.QtGui import QPixmap, QFont
@@ -183,6 +183,18 @@ class ImageWindow(QMainWindow):
         self.brightness_data = []
         self.processed_images = set()
 
+        # 阈值参数
+        self.settings = {
+            'elongation_upper_threshold': 1.0,
+            'elongation_lower_threshold': 0.0,
+            'area_upper_threshold': 800,
+            'area_lower_threshold': -800,
+            'std_min_upper_threshold': 0.6,
+            'std_min_lower_threshold': -0.6,
+            'brightness_upper_threshold': 255,
+            'brightness_lower_threshold': 0,
+        }
+
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
         self.timer.start(1000)
@@ -199,80 +211,99 @@ class ImageWindow(QMainWindow):
         # QMessageBox.information(self, "分析结果", "这里显示分析结果。")
 
     def open_settings_dialog(self):
-        # 打开设置参数对话框的逻辑
         dialog = QDialog(self)
         dialog.setWindowTitle("设置参数")
-        layout = QFormLayout()
+        main_layout = QVBoxLayout(dialog)  # 主布局
 
-        # 使用当前参数预填充输入框
-        self.image_coord_x1 = QLineEdit(str(self.image_coord[0] if self.image_coord else ""), dialog)
-        self.image_coord_y1 = QLineEdit(str(self.image_coord[1] if self.image_coord else ""), dialog)
-        self.image_coord_x2 = QLineEdit(str(self.image_coord[2] if self.image_coord else ""), dialog)
-        self.image_coord_y2 = QLineEdit(str(self.image_coord[3] if self.image_coord else ""), dialog)
+        # 图像处理参数设置
+        image_processing_group = QGroupBox("图像处理参数")
+        image_processing_layout = QFormLayout()
+        # 创建并添加图像处理参数控件
+        self.image_coord_x1 = QLineEdit(str(self.image_coord[0] if self.image_coord else ""))
+        self.image_coord_y1 = QLineEdit(str(self.image_coord[1] if self.image_coord else ""))
+        self.image_coord_x2 = QLineEdit(str(self.image_coord[2] if self.image_coord else ""))
+        self.image_coord_y2 = QLineEdit(str(self.image_coord[3] if self.image_coord else ""))
+        self.dark_rect_x1 = QLineEdit(str(self.dark_rect[0] if self.dark_rect else ""))
+        self.dark_rect_y1 = QLineEdit(str(self.dark_rect[1] if self.dark_rect else ""))
+        self.dark_rect_x2 = QLineEdit(str(self.dark_rect[2] if self.dark_rect else ""))
+        self.dark_rect_y2 = QLineEdit(str(self.dark_rect[3] if self.dark_rect else ""))
+        # 添加到布局
+        image_processing_layout.addRow("图像坐标 x1:", self.image_coord_x1)
+        image_processing_layout.addRow("图像坐标 y1:", self.image_coord_y1)
+        image_processing_layout.addRow("图像坐标 x2:", self.image_coord_x2)
+        image_processing_layout.addRow("图像坐标 y2:", self.image_coord_y2)
+        image_processing_layout.addRow("暗斑区域坐标 x1:", self.dark_rect_x1)
+        image_processing_layout.addRow("暗斑区域坐标 y1:", self.dark_rect_y1)
+        image_processing_layout.addRow("暗斑区域坐标 x2:", self.dark_rect_x2)
+        image_processing_layout.addRow("暗斑区域坐标 y2:", self.dark_rect_y2)
+        image_processing_group.setLayout(image_processing_layout)
 
-        self.dark_rect_x1 = QLineEdit(str(self.dark_rect[0] if self.dark_rect else ""), dialog)
-        self.dark_rect_y1 = QLineEdit(str(self.dark_rect[1] if self.dark_rect else ""), dialog)
-        self.dark_rect_x2 = QLineEdit(str(self.dark_rect[2] if self.dark_rect else ""), dialog)
-        self.dark_rect_y2 = QLineEdit(str(self.dark_rect[3] if self.dark_rect else ""), dialog)
+        # 更新设置
+        update_settings_group = QGroupBox("更新设置")
+        update_settings_layout = QFormLayout()
+        self.interval_t = QLineEdit(str(self.interval / 1000 if self.interval else ""))
+        update_settings_layout.addRow("更新图片间隔(秒):", self.interval_t)
+        update_settings_group.setLayout(update_settings_layout)
 
-        self.interval_t = QLineEdit(str(self.interval / 1000 if self.interval else ""), dialog)
+        # 阈值设置
+        threshold_settings_group = QGroupBox("阈值设置")
+        threshold_settings_layout = QVBoxLayout()
 
+        # 创建并添加阈值设置控件
+        self.elongation_upper_threshold = QLineEdit(str(self.settings['elongation_upper_threshold']))
+        self.elongation_lower_threshold = QLineEdit(str(self.settings['elongation_lower_threshold']))
+        self.area_upper_threshold = QLineEdit(str(self.settings['area_upper_threshold']))
+        self.area_lower_threshold = QLineEdit(str(self.settings['area_lower_threshold']))
+        self.std_min_upper_threshold = QLineEdit(str(self.settings['std_min_upper_threshold']))
+        self.std_min_lower_threshold = QLineEdit(str(self.settings['std_min_lower_threshold']))
+        self.brightness_upper_threshold = QLineEdit(str(self.settings['brightness_upper_threshold']))
+        self.brightness_lower_threshold = QLineEdit(str(self.settings['brightness_lower_threshold']))
 
-        # 设置输入提示
-        self.image_coord_x1.setPlaceholderText("RHEED图像位置x1")
-        self.image_coord_y1.setPlaceholderText("RHEED图像位置y1")
-        self.image_coord_x2.setPlaceholderText("RHEED图像位置x2")
-        self.image_coord_y2.setPlaceholderText("RHEED图像位置y2")
+        threshold_settings_layout.addLayout(self.create_threshold_layout("拉伸率阈值", self.elongation_upper_threshold, self.elongation_lower_threshold))
+        threshold_settings_layout.addLayout(self.create_threshold_layout("面积阈值", self.area_upper_threshold, self.area_lower_threshold))
+        threshold_settings_layout.addLayout(self.create_threshold_layout("标准差/最小值阈值", self.std_min_upper_threshold, self.std_min_lower_threshold))
+        threshold_settings_layout.addLayout(self.create_threshold_layout("亮度阈值", self.brightness_upper_threshold, self.brightness_lower_threshold))
+        
+        threshold_settings_group.setLayout(threshold_settings_layout)
 
-        self.dark_rect_x1.setPlaceholderText("0-640")
-        self.dark_rect_y1.setPlaceholderText("0-480")
-        self.dark_rect_x2.setPlaceholderText("0-640")
-        self.dark_rect_y2.setPlaceholderText("0-480")
-
-        self.interval_t.setPlaceholderText("单位 秒(s)")
-
-        # 设置焦点跳转
-        self.image_coord_x1.returnPressed.connect(lambda: self.image_coord_y1.setFocus())
-        self.image_coord_y1.returnPressed.connect(lambda: self.image_coord_x2.setFocus())
-        self.image_coord_x2.returnPressed.connect(lambda: self.image_coord_y2.setFocus())
-        self.image_coord_y2.returnPressed.connect(lambda: self.dark_rect_x1.setFocus())
-        self.dark_rect_x1.returnPressed.connect(lambda: self.dark_rect_y1.setFocus())
-        self.dark_rect_y1.returnPressed.connect(lambda: self.dark_rect_x2.setFocus())
-        self.dark_rect_x2.returnPressed.connect(lambda: self.dark_rect_y2.setFocus()) 
-        self.dark_rect_y2.returnPressed.connect(lambda: self.interval_t.setFocus()) 
-
-        # 将输入框添加到布局中
-        layout.addRow("图像坐标 x1:", self.image_coord_x1)
-        layout.addRow("图像坐标 y1:", self.image_coord_y1)
-        layout.addRow("图像坐标 x2:", self.image_coord_x2)
-        layout.addRow("图像坐标 y2:", self.image_coord_y2)
-
-        layout.addRow("暗斑区域坐标 x1:", self.dark_rect_x1)
-        layout.addRow("暗斑区域坐标 y1:", self.dark_rect_y1)
-        layout.addRow("暗斑区域坐标 x2:", self.dark_rect_x2)
-        layout.addRow("暗斑区域坐标 y2:", self.dark_rect_y2)
-
-        layout.addRow("更新图片间隔:", self.interval_t)
+        # 将所有分组添加到主布局
+        main_layout.addWidget(image_processing_group)
+        main_layout.addWidget(update_settings_group)
+        main_layout.addWidget(threshold_settings_group)
 
         # 添加保存和取消按钮
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(dialog.accept)  # 点击保存时接受更改
-        buttons.rejected.connect(dialog.reject) # 点击取消时放弃更改
-        layout.addWidget(buttons)
-        dialog.setLayout(layout)
-        result = dialog.exec_()  
+        buttons.rejected.connect(dialog.reject)  # 点击取消时放弃更改
+        main_layout.addWidget(buttons)
 
-        # 如果用户点击保存，则更新坐标信息
+        dialog.setLayout(main_layout)
+        result = dialog.exec_()
+
+        # 如果用户点击保存，则更新坐标信息和阈值
         if result == QDialog.Accepted:
-            self.image_coord = (self.parse_coordinate(self.image_coord_x1.text()),
-                                self.parse_coordinate(self.image_coord_y1.text()),
-                                self.parse_coordinate(self.image_coord_x2.text()),
-                                self.parse_coordinate(self.image_coord_y2.text()))
-            self.dark_rect = (self.parse_coordinate(self.dark_rect_x1.text()),
-                              self.parse_coordinate(self.dark_rect_y1.text()),
-                              self.parse_coordinate(self.dark_rect_x2.text()),
-                              self.parse_coordinate(self.dark_rect_y2.text()))
-            self.interval = max(10, float(self.interval_t.text()) * 1000)
+            self.update_settings_from_dialog()
+
+    def create_threshold_layout(self, group_title, upper_threshold, lower_threshold):
+        layout = QFormLayout()
+        layout.addRow(group_title + " 上阈值:", upper_threshold)
+        layout.addRow(group_title + " 下阈值:", lower_threshold)
+        return layout
+
+    def update_settings_from_dialog(self):
+        # 更新图像坐标和暗斑区域坐标
+        self.image_coord = (int(self.image_coord_x1.text()), int(self.image_coord_y1.text()), int(self.image_coord_x2.text()), int(self.image_coord_y2.text()))
+        self.dark_rect = (int(self.dark_rect_x1.text()), int(self.dark_rect_y1.text()), int(self.dark_rect_x2.text()), int(self.dark_rect_y2.text()))
+        self.interval = max(10, float(self.interval_t.text()) * 1000)
+        # 更新阈值
+        self.settings['elongation_upper_threshold'] = float(self.elongation_upper_threshold.text())
+        self.settings['elongation_lower_threshold'] = float(self.elongation_lower_threshold.text())
+        self.settings['area_upper_threshold'] = float(self.area_upper_threshold.text())
+        self.settings['area_lower_threshold'] = float(self.area_lower_threshold.text())
+        self.settings['std_min_upper_threshold'] = float(self.std_min_upper_threshold.text())
+        self.settings['std_min_lower_threshold'] = float(self.std_min_lower_threshold.text())
+        self.settings['brightness_upper_threshold'] = float(self.brightness_upper_threshold.text())
+        self.settings['brightness_lower_threshold'] = float(self.brightness_lower_threshold.text())
 
     def open_sync_settings_dialog(self):
         # 打开文件同步设置对话框的逻辑
@@ -473,7 +504,7 @@ class ImageWindow(QMainWindow):
         self.std2min_data.append(std2min)
         self.brightness_data.append(brightness)
         #分析参数
-        eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data, blocked)
+        eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data, blocked, self.settings)
         if eval_result:
             self.infoTextBox.append(eval_result)
 

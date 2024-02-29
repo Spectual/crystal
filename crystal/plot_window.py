@@ -67,7 +67,7 @@ class PlotWindowBase(QWidget):
 class ElongationPlotWindow(PlotWindowBase):
     def __init__(self):
         super().__init__("拉伸率变化", "拉伸率", "elongation")
-        self.plot_widget.setYRange(-0.15, 0.1)
+        self.plot_widget.setYRange(-0.2, 0.3)
 
     def plot_all_data(self):
         data_length = len(self.data_dict['bright_l'])
@@ -98,7 +98,7 @@ class ElongationPlotWindow(PlotWindowBase):
 class AreaPlotWindow(PlotWindowBase):
     def __init__(self):
         super().__init__("面积变化", "面积", "area")
-        self.plot_widget.setYRange(-1000, 1000)
+        self.plot_widget.setYRange(-1500, 2000)
 
     def plot_all_data(self):
         data_length = len(self.data_dict['bright_l'])
@@ -131,15 +131,15 @@ class AreaPlotWindow(PlotWindowBase):
 class Std2minPlotWindow(PlotWindowBase):
     def __init__(self):
         super().__init__("标准差/最小值变化", "标准差/最小值", "std2min")
-        self.plot_widget.setYRange(-1, 3)
+        self.plot_widget.setYRange(180, 260)
 
     def plot_all_data(self):
         data_length = len(self.data_dict)
         start_index = max(0, data_length - 30)
         x = range(len(self.data_dict))
 
-        self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in self.data_dict], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
-
+        # self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in self.data_dict], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
+        self.plot_widget.plot(x, [std2min for std2min in self.data_dict], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
         # 添加图例
         self.plot_widget.addLegend(offset=(10, 10))
 
@@ -149,8 +149,8 @@ class Std2minPlotWindow(PlotWindowBase):
         x = range(start_index, data_length)
 
         std2min_data_last_30 = self.data_dict[-30:]
-        self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
-
+        # self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
+        self.plot_widget.plot(x, [std2min for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
         # 添加图例
         self.plot_widget.addLegend(offset=(10, 10))
 
