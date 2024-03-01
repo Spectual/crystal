@@ -93,6 +93,8 @@ def detect_and_name_spots(bin_img, img):
             if len(cnt) >= 5:
                 # if brightness < 150:
                 hull = cv2.convexHull(cnt)
+                if len(hull) < 5:
+                    continue
                 ellipse = cv2.fitEllipse(hull)
                 ellipses.append(ellipse)
                 [(ex, ey), (l, s), angle] = ellipse

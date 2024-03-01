@@ -2,6 +2,7 @@ import os
 from PyQt5.QtGui import QImage, QPixmap
 import numpy as np
 import time
+import csv
 
 def split_timestamp_from_filename(image_filename):
     '''
@@ -63,6 +64,28 @@ def get_image_files(folder_path):
     return images
 
 
+def init_data_file(data_file):
+    #初始化表格
+    if not os.path.exists(data_file):
+        with open(data_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['Timestamp', 'Std2Min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R', 'Area_R', 'Brightness'])
+
+def record_data(data_file, timestamp, std2min, info, brightness):
+    with open(data_file, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        data = [
+            timestamp,
+            std2min,
+            info.get('bright_l', {}).get('elongation', ''),
+            info.get('bright_l', {}).get('area', ''),
+            info.get('bright_m', {}).get('elongation', ''),
+            info.get('bright_m', {}).get('area', ''),
+            info.get('bright_r', {}).get('elongation', ''),
+            info.get('bright_r', {}).get('area', ''),
+            brightness
+        ]
+        writer.writerow(data)
 
 if __name__ == "__main__":
     print(get_image_files('./data'))

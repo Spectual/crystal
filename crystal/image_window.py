@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QGr
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QSize, QEvent
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
-from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename,update_first_info
+from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename,update_first_info, init_data_file, record_data
 import time
 import platform
 import uuid
@@ -173,15 +173,19 @@ class ImageWindow(QMainWindow):
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("准备就绪")
 
-        # 存放数据和定时器代码
+        # 存放参数数据和文件路径
         self.current_folder = None
-        self.images = []
         self.current_index = -1
+        self.images = []
         self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.std2min_data = []
         self.brightness_data = []
         self.processed_images = set()
+
+        #数据表格文件初始化
+        self.data_file = 'data.csv'
+        init_data_file(self.data_file)
 
         # 阈值参数
         self.settings = {
@@ -480,6 +484,10 @@ class ImageWindow(QMainWindow):
         image_name = split_timestamp_from_filename(os.path.basename(image_path))
         formatted_time = timestamp_to_datetime(image_name)
 
+        #参数数据存入表格
+        record_data(self.data_file, formatted_time, std2min, info, brightness)
+
+        #图像UI
         if not blocked:
             self.status_bar.showMessage("拍摄时间:"+formatted_time)
         else:
