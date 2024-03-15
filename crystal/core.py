@@ -7,6 +7,7 @@ from .image_window import ImageWindow
 from .plot_window import AreaPlotWindow, ElongationPlotWindow, Std2minPlotWindow, BrightnessPlotWindow, IntegratedPlotWindow
 import argparse
 import time
+import qdarkstyle
 
 sys.setrecursionlimit(10**5)  # 设置递归最大深度 10的5次方
 
@@ -30,6 +31,7 @@ def run():
 
     image_window = ImageWindow(plot_window, args.interval, args.image_coord, args.dark_rect)
 
+    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
     # 创建并显示启动界面
 
     # 根据操作系统选择图片路径
@@ -47,7 +49,7 @@ def run():
 
     # 使用定时器来模拟主窗口加载时间
     # QTimer.singleShot(3000, lambda: (splash.close(), plot_window.show(),  image_window.show()))
-    time.sleep(3)
+    time.sleep(0)
 
     splash.close()
     # plot_window.show()

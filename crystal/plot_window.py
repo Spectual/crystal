@@ -131,9 +131,10 @@ class AreaPlotWindow(PlotWindowBase):
 class Std2minPlotWindow(PlotWindowBase):
     def __init__(self):
         super().__init__("标准差/最小值变化", "标准差/最小值", "std2min")
-        self.plot_widget.setYRange(180, 260)
+        self.plot_widget.setYRange(-30, 30)
 
     def plot_all_data(self):
+        self.plot_widget.setYRange(180, 260)
         data_length = len(self.data_dict)
         start_index = max(0, data_length - 30)
         x = range(len(self.data_dict))
@@ -149,8 +150,8 @@ class Std2minPlotWindow(PlotWindowBase):
         x = range(start_index, data_length)
 
         std2min_data_last_30 = self.data_dict[-30:]
-        # self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
-        self.plot_widget.plot(x, [std2min for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
+        self.plot_widget.plot(x, [std2min - self.data_dict[0] for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
+        # self.plot_widget.plot(x, [std2min for std2min in std2min_data_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='暗斑')
         # 添加图例
         self.plot_widget.addLegend(offset=(10, 10))
 
@@ -185,12 +186,10 @@ class IntegratedPlotWindow(QWidget):
         super().__init__()
         self.setWindowTitle("综合图表分析")
         self.setGeometry(100, 100, 900, 600)
-        self.setMinimumSize(640, 480)
+        # self.setMinimumSize(640, 480)
 
         # 创建标签页
         self.tabs = QTabWidget(self)
-        layout = QVBoxLayout(self)
-        layout.addWidget(self.tabs)
 
         # 添加各个图表到标签页
         self.elongation_tab = ElongationPlotWindow()
@@ -202,6 +201,10 @@ class IntegratedPlotWindow(QWidget):
         self.tabs.addTab(self.area_tab, "面积")
         self.tabs.addTab(self.std2min_tab, "标准差/最小值")
         self.tabs.addTab(self.brightness_tab, "亮度")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.tabs)
+
 
     def update_plots(self, elongation_data, area_data, std2min_data, brightness_data):
         self.elongation_tab.update_plot(elongation_data)

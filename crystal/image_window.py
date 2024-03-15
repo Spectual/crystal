@@ -1,7 +1,7 @@
 import os
 import glob
-from PyQt5.QtWidgets import (QMainWindow, QAction, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QTextEdit,
-                             QWidget, QTabWidget, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog,
+from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QTextEdit,
+                             QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog,
                              QLineEdit, QFormLayout, QHBoxLayout, QFileDialog, QSizePolicy, QSpacerItem)
 from PyQt5.QtGui import QPixmap, QFont
 from PyQt5.QtCore import Qt, QTimer, QSize, QEvent
@@ -35,7 +35,7 @@ class ImageWindow(QMainWindow):
         # 判断用户是否选择了标准图片，选择则不清空数据
         self.is_selected = False
 
-        self.setWindowTitle("晶体RHEED图像分析系统")
+        self.setWindowTitle("IBAD晶体生长过程分析系统")
         self.move(100, 100)
 
         # 创建菜单栏和菜单项
@@ -71,102 +71,74 @@ class ImageWindow(QMainWindow):
         about_action = QAction('关于', self)
         help_menu.addAction(about_action)
 
-        # 创建图像页面的布局
-        self.imageTab = QWidget()
-        imageTabLayout = QVBoxLayout(self.imageTab)
         self.imageLabel = QLabel(self)
         self.imageLabel.setScaledContents(False)
-        self.imageLabel.setMinimumSize(640, 480)
-        self.imageLabel.setStyleSheet("QLabel { background-color: rgb(203, 204, 205); }")
-        imageTabLayout.addWidget(self.imageLabel)
+        self.imageLabel.setMinimumSize(444, 333)
+        self.imageLabel.setStyleSheet("""
+            QLabel {
+              background-color: #19232D; /* 深蓝色背景 */
+              color: #DFE1E2; /* 浅灰色文字 */
+              border-radius: 4px; /* 边角圆润度 */
+              border: 1px solid #455364; /* 深灰色边框 */
+            }
+            """)
 
-        # 设置垂直伸缩策略
-        self.imageTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.plot_window.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # 创建两列的表格
+        self.infoTextBox = QTableWidget(0, 2)  # 初始化为0行2列
+        self.infoTextBox.setHorizontalHeaderLabels(['时间', '提示'])
+        # self.infoTextBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.infoTextBox.setMinimumSize(200, 100)
+        self.infoTextBox.horizontalHeader().setDefaultAlignment(Qt.AlignCenter)
+        self.infoTextBox.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.infoTextBox.verticalHeader().hide() 
+        font = QFont()
+        font.setPointSize(20)
+        self.infoTextBox.setFont(font)
 
-        # 右侧布局 - 按钮和文本框
-        right_layout = QVBoxLayout()
+        # 使用 QSplitter 替换原来的 QHBoxLayout
+        horizontal_splitter_top = QSplitter(Qt.Horizontal)
+        horizontal_splitter_top.addWidget(self.imageLabel)
+        horizontal_splitter_top.addWidget(self.infoTextBox)
 
-        # 在布局中添加 200 像素的空间
-        right_layout.addSpacing(100)
-
-        button_layout = QHBoxLayout()
-        # 按钮水平布局
+        # 按钮的垂直布局
+        vertical_layout_buttons = QVBoxLayout()
         self.startAnalysisButton = QPushButton("启动分析", self)
         self.startAnalysisButton.clicked.connect(self.load_images)
-        self.startAnalysisButton.setMaximumSize(300, 100)  # 设置按钮的固定大小
-        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
+        self.startAnalysisButton.setMaximumSize(200, 50)
         self.startAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        button_layout.addWidget(self.startAnalysisButton)
+        vertical_layout_buttons.addWidget(self.startAnalysisButton)
 
         self.stopAnalysisButton = QPushButton("中止分析", self)
         self.stopAnalysisButton.clicked.connect(self.stop_analysis)
-        self.stopAnalysisButton.setMaximumSize(300, 100)
-        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
-        self.stopAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        button_layout.addWidget(self.stopAnalysisButton)
+        self.stopAnalysisButton.setMaximumSize(200, 50)
+        self.stopAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        vertical_layout_buttons.addWidget(self.stopAnalysisButton)
 
         self.continueAnalysisButton = QPushButton("继续分析", self)
         self.continueAnalysisButton.clicked.connect(self.continue_analysis)
-        self.continueAnalysisButton.setMaximumSize(300, 100)
-        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
-        self.continueAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        button_layout.addWidget(self.continueAnalysisButton)
+        self.continueAnalysisButton.setMaximumSize(200, 50)
+        self.continueAnalysisButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        vertical_layout_buttons.addWidget(self.continueAnalysisButton)
 
         self.exitButton = QPushButton("退出", self)
         self.exitButton.clicked.connect(self.close_application)
-        self.exitButton.setMaximumSize(300, 100)
-        # 设置按钮的大小策略，使其在水平和垂直方向上都可以伸缩
-        self.exitButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        button_layout.addWidget(self.exitButton)
+        self.exitButton.setMaximumSize(200, 50)
+        self.exitButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        vertical_layout_buttons.addWidget(self.exitButton)
 
-        # 将水平布局添加到垂直布局
-        right_layout.addLayout(button_layout)
+        # 创建主要的水平布局，包含 QSplitter 和按钮的垂直布局
+        main_horizontal_layout = QHBoxLayout()
+        main_horizontal_layout.addWidget(horizontal_splitter_top)
+        main_horizontal_layout.addLayout(vertical_layout_buttons)
 
-        # 在布局中添加 200 像素的空间
-        right_layout.addSpacing(200)
+        # 创建主要的垂直布局，上方为main_horizontal_layout，下方为图表组件
+        main_vertical_layout = QVBoxLayout()
+        main_vertical_layout.addLayout(main_horizontal_layout, 1)
+        main_vertical_layout.addWidget(self.plot_window, 1)  # 假设你的图表组件是self.plot_window
 
-        # 创建垂直布局用于文本框
-        text_layout = QVBoxLayout()
-
-        # 创建实时文本框用于显示分析结果
-        self.infoTextBox = QTextEdit(self)
-        self.infoTextBox.setReadOnly(True)  # 只读
-        self.infoTextBox.setMinimumSize(200, 100)
-        # 设置文本框的大小策略，使其能够按比例伸缩
-        self.infoTextBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        # 设置文本框的字体大小
-        font = QFont()
-        font.setPointSize(20)  # 设置字体大小
-        self.infoTextBox.setFont(font)
-
-        # 添加文本框到垂直布局
-        text_layout.addWidget(self.infoTextBox)
-
-        # 将垂直布局添加到右侧布局
-        right_layout.addLayout(text_layout)
-
-        # 创建垂直布局包含图像页面
-        imageLayout = QVBoxLayout()
-        imageLayout.addWidget(self.imageTab)
-
-        # 创建垂直布局包含图表页面
-        plotLayout = QVBoxLayout()
-        plotLayout.addWidget(self.plot_window)
-
-        vertical_layout = QVBoxLayout()
-        vertical_layout.addWidget(self.imageTab)
-        vertical_layout.addWidget(self.plot_window)
-
-        # 创建水平布局包含垂直布局和right_layout
-        main_layout = QHBoxLayout()
-        main_layout.addLayout(vertical_layout)
-        main_layout.addLayout(right_layout)
-
-        # 设置中心窗口
+        # 设置中心窗口布局
         central_widget = QWidget()
-        central_widget.setLayout(main_layout)
+        central_widget.setLayout(main_vertical_layout)
         self.setCentralWidget(central_widget)
 
         # 创建状态栏
@@ -193,8 +165,8 @@ class ImageWindow(QMainWindow):
             'elongation_lower_threshold': 0.0,
             'area_upper_threshold': 800,
             'area_lower_threshold': -800,
-            'std_min_upper_threshold': 0.6,
-            'std_min_lower_threshold': -0.6,
+            'std_min_upper_threshold': 50,
+            'std_min_lower_threshold': -50,
             'brightness_upper_threshold': 255,
             'brightness_lower_threshold': 0,
         }
@@ -263,10 +235,10 @@ class ImageWindow(QMainWindow):
         self.brightness_upper_threshold = QLineEdit(str(self.settings['brightness_upper_threshold']))
         self.brightness_lower_threshold = QLineEdit(str(self.settings['brightness_lower_threshold']))
 
-        threshold_settings_layout.addLayout(self.create_threshold_layout("拉伸率阈值", self.elongation_upper_threshold, self.elongation_lower_threshold))
-        threshold_settings_layout.addLayout(self.create_threshold_layout("面积阈值", self.area_upper_threshold, self.area_lower_threshold))
-        threshold_settings_layout.addLayout(self.create_threshold_layout("标准差/最小值阈值", self.std_min_upper_threshold, self.std_min_lower_threshold))
-        threshold_settings_layout.addLayout(self.create_threshold_layout("亮度阈值", self.brightness_upper_threshold, self.brightness_lower_threshold))
+        threshold_settings_layout.addLayout(self.create_threshold_layout("拉伸率", self.elongation_upper_threshold, self.elongation_lower_threshold))
+        threshold_settings_layout.addLayout(self.create_threshold_layout("面积", self.area_upper_threshold, self.area_lower_threshold))
+        threshold_settings_layout.addLayout(self.create_threshold_layout("标准差/最小值", self.std_min_upper_threshold, self.std_min_lower_threshold))
+        threshold_settings_layout.addLayout(self.create_threshold_layout("亮度", self.brightness_upper_threshold, self.brightness_lower_threshold))
         
         threshold_settings_group.setLayout(threshold_settings_layout)
 
@@ -408,8 +380,8 @@ class ImageWindow(QMainWindow):
             if system == "Windows":
                 folder_path = r".\data\test"
             if system == "Darwin":
-                folder_path = "./data/test"
-            # folder_path = "/Volumes/Avocado/crystal/data/test"
+                # folder_path = "/Volumes/Avocado/crystal/data/2-4"
+                folder_path = "data/73"
 
         else:
             folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
@@ -472,6 +444,33 @@ class ImageWindow(QMainWindow):
             self.images.append(new_image)
             # self.show_image(new_image)
 
+    def addRow(self, col1_data, col2_data):
+        row_position = self.infoTextBox.rowCount()
+        self.infoTextBox.insertRow(row_position)
+
+        # 根据字体大小设置行高
+        row_height = max(self.infoTextBox.fontMetrics().height() + 50, 20)  # 示例行高
+        self.infoTextBox.setRowHeight(row_position, row_height)
+
+        # 创建 QTableWidgetItem 实例，并设置数据
+        item1 = QTableWidgetItem(col1_data)
+        item2 = QTableWidgetItem(col2_data)
+        
+        # 设置文本对齐方式为水平和竖直居中
+        item1.setTextAlignment(Qt.AlignCenter)
+        item2.setTextAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        
+        # 将单元格项添加到表格
+        self.infoTextBox.setItem(row_position, 0, item1)
+        self.infoTextBox.setItem(row_position, 1, item2)
+
+        # self.infoTextBox.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        # self.infoTextBox.horizontalHeader().setStretchLastSection(True)
+
+
+        # 添加行后滚动到底部
+        self.infoTextBox.scrollToBottom()
+
     def show_image(self, image_path):
         #展示处理后的图像
         img = cut_image(image_path, self.image_coord)
@@ -485,7 +484,7 @@ class ImageWindow(QMainWindow):
         formatted_time = timestamp_to_datetime(image_name)
 
         #参数数据存入表格
-        record_data(self.data_file, formatted_time, std2min, info, brightness)
+        record_data(self.data_file, image_name, formatted_time, std2min, info, brightness)
 
         #图像UI
         if not blocked:
@@ -514,7 +513,7 @@ class ImageWindow(QMainWindow):
         #分析参数
         eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data, blocked, self.settings)
         if eval_result:
-            self.infoTextBox.append(eval_result)
+            self.addRow(formatted_time, eval_result)
 
         if image_path not in self.processed_images: 
             self.processed_images.add(image_path)  

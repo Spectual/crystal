@@ -69,13 +69,14 @@ def init_data_file(data_file):
     if not os.path.exists(data_file):
         with open(data_file, mode='w', newline='') as file:
             writer = csv.writer(file)
-            writer.writerow(['Timestamp', 'Std2Min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R', 'Area_R', 'Brightness'])
+            writer.writerow(['Timestamp', 'Datetime', 'Std2Min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R', 'Area_R', 'Brightness'])
 
-def record_data(data_file, timestamp, std2min, info, brightness):
+def record_data(data_file, timestamp, datetime, std2min, info, brightness):
     with open(data_file, mode='a', newline='') as file:
         writer = csv.writer(file)
         data = [
             timestamp,
+            datetime,
             std2min,
             info.get('bright_l', {}).get('elongation', ''),
             info.get('bright_l', {}).get('area', ''),

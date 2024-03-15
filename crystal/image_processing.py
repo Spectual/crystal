@@ -214,19 +214,19 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, 
         return False
 
     if len(info) < 3:
-        return formatted_time + "\n异常"
+        return "\n异常"
 
     if std2min_data[-1] - std2min_data[0] < settings['std_min_lower_threshold']:
-        return formatted_time + "\n暗斑 异常"
+        return "\n暗斑 异常"
 
     if area_data['bright_l'][-1] - area_data['bright_l'][0] < settings['area_lower_threshold']:
-        return formatted_time + "\n面积 异常"
+        return "\n面积 异常"
 
     if area_data['bright_l'][-1] - area_data['bright_l'][0] > settings['area_upper_threshold']:
-        return formatted_time + "\n面积 异常"
+        return "\n面积 异常"
 
     if elongation_data['bright_r'][-1] - elongation_data['bright_r'][0] > settings['elongation_upper_threshold']:
-        return formatted_time + "\n亮斑 变细"
+        return "\n亮斑 变细"
 
     return False
 
