@@ -8,10 +8,10 @@ from .utils import timestamp_to_datetime, split_timestamp_from_filename
 
 
 def cut_image(image_path, image_area):
-    print("---", image_path)
+    # print("---", image_path)
     img = cv2.imread(image_path)
-    print(len(img))
-    print("---")
+    # print(len(img))
+    # print("---")
     x1, y1, x2, y2 = image_area
     try:
         img = img[y1:y2, x1:x2]
@@ -214,19 +214,19 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, 
         return False
 
     if len(info) < 3:
-        return "\n异常"
+        return "异常"
 
     if std2min_data[-1] - std2min_data[0] < settings['std_min_lower_threshold']:
-        return "\n暗斑 异常"
+        return "暗斑 异常"
 
     if area_data['bright_l'][-1] - area_data['bright_l'][0] < settings['area_lower_threshold']:
-        return "\n面积 异常"
+        return "面积 异常"
 
     if area_data['bright_l'][-1] - area_data['bright_l'][0] > settings['area_upper_threshold']:
-        return "\n面积 异常"
+        return "面积 异常"
 
     if elongation_data['bright_r'][-1] - elongation_data['bright_r'][0] > settings['elongation_upper_threshold']:
-        return "\n亮斑 变细"
+        return "亮斑 变细"
 
     return False
 

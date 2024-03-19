@@ -3,11 +3,12 @@ import glob
 from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QTextEdit,
                              QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog,
                              QLineEdit, QFormLayout, QHBoxLayout, QFileDialog, QSizePolicy, QSpacerItem)
-from PyQt5.QtGui import QPixmap, QFont
+from PyQt5.QtGui import QPixmap, QFont, QBrush, QColor
 from PyQt5.QtCore import Qt, QTimer, QSize, QEvent
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
-from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename,update_first_info, init_data_file, record_data
+from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename,update_first_info, init_data_file, init_log_file, record_data, record_log
 import time
+import datetime
 import platform
 import uuid
 import numpy as np
@@ -34,6 +35,9 @@ class ImageWindow(QMainWindow):
 
         # 判断用户是否选择了标准图片，选择则不清空数据
         self.is_selected = False
+
+        #无异常计数器
+        self.no_exception_count = 0 
 
         self.setWindowTitle("IBAD晶体生长过程分析系统")
         self.move(100, 100)
@@ -155,9 +159,16 @@ class ImageWindow(QMainWindow):
         self.brightness_data = []
         self.processed_images = set()
 
+        #操作员名称初始化
+        self.user_name = "admin"
+
         #数据表格文件初始化
         self.data_file = 'data.csv'
         init_data_file(self.data_file)
+
+        #日志表格文件初始化
+        self.log_file = "logs/" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".csv"
+        init_log_file(self.log_file)
 
         # 阈值参数
         self.settings = {
@@ -169,6 +180,7 @@ class ImageWindow(QMainWindow):
             'std_min_lower_threshold': -50,
             'brightness_upper_threshold': 255,
             'brightness_lower_threshold': 0,
+            'no_exception_count_threshold': 30
         }
 
         self.timer = QTimer(self)
@@ -177,6 +189,8 @@ class ImageWindow(QMainWindow):
 
         self.sync_read_path = r"\\192.168.4.170\test"
         self.sync_save_path = r"./data/test"
+
+        record_log(self.log_file, self.user_name, "系统事件", "系统启动")
 
     def open_plot_window(self):
         # 打开图表窗口
@@ -223,7 +237,7 @@ class ImageWindow(QMainWindow):
 
         # 阈值设置
         threshold_settings_group = QGroupBox("阈值设置")
-        threshold_settings_layout = QVBoxLayout()
+        threshold_settings_layout = QFormLayout()
 
         # 创建并添加阈值设置控件
         self.elongation_upper_threshold = QLineEdit(str(self.settings['elongation_upper_threshold']))
@@ -234,11 +248,17 @@ class ImageWindow(QMainWindow):
         self.std_min_lower_threshold = QLineEdit(str(self.settings['std_min_lower_threshold']))
         self.brightness_upper_threshold = QLineEdit(str(self.settings['brightness_upper_threshold']))
         self.brightness_lower_threshold = QLineEdit(str(self.settings['brightness_lower_threshold']))
+        self.no_exception_count_threshold_edit = QLineEdit(str(self.settings['no_exception_count_threshold']))
 
-        threshold_settings_layout.addLayout(self.create_threshold_layout("拉伸率", self.elongation_upper_threshold, self.elongation_lower_threshold))
-        threshold_settings_layout.addLayout(self.create_threshold_layout("面积", self.area_upper_threshold, self.area_lower_threshold))
-        threshold_settings_layout.addLayout(self.create_threshold_layout("标准差/最小值", self.std_min_upper_threshold, self.std_min_lower_threshold))
-        threshold_settings_layout.addLayout(self.create_threshold_layout("亮度", self.brightness_upper_threshold, self.brightness_lower_threshold))
+        threshold_settings_layout.addRow("近圆系数 上阈值:", self.elongation_upper_threshold)
+        threshold_settings_layout.addRow("近圆系数 下阈值:", self.elongation_lower_threshold)
+        threshold_settings_layout.addRow("面积 上阈值:", self.area_upper_threshold)
+        threshold_settings_layout.addRow("面积 下阈值:", self.area_lower_threshold)
+        threshold_settings_layout.addRow("标准差/最小值 上阈值:", self.std_min_upper_threshold)
+        threshold_settings_layout.addRow("标准差/最小值 下阈值:", self.std_min_lower_threshold)
+        threshold_settings_layout.addRow("亮度 上阈值:", self.brightness_upper_threshold)
+        threshold_settings_layout.addRow("亮度 下阈值:", self.brightness_lower_threshold)
+        threshold_settings_layout.addRow("无异常提示阈值:", self.no_exception_count_threshold_edit)
         
         threshold_settings_group.setLayout(threshold_settings_layout)
 
@@ -280,6 +300,7 @@ class ImageWindow(QMainWindow):
         self.settings['std_min_lower_threshold'] = float(self.std_min_lower_threshold.text())
         self.settings['brightness_upper_threshold'] = float(self.brightness_upper_threshold.text())
         self.settings['brightness_lower_threshold'] = float(self.brightness_lower_threshold.text())
+        self.settings['no_exception_count_threshold'] = int(self.no_exception_count_threshold_edit.text())
 
     def open_sync_settings_dialog(self):
         # 打开文件同步设置对话框的逻辑
@@ -360,6 +381,7 @@ class ImageWindow(QMainWindow):
         '''
         退出软件
         '''
+        record_log(self.log_file, self.user_name, "系统事件", "系统关闭")
         if self.plot_window is not None:
             self.plot_window.close()
 
@@ -388,6 +410,7 @@ class ImageWindow(QMainWindow):
             if not folder_path:
                 return
 
+        record_log(self.log_file, self.user_name, "系统事件", "加载图像文件夹:"+folder_path)
         self.current_folder = folder_path
         self.images = get_image_files(folder_path)
         self.is_first_load = False
@@ -403,6 +426,7 @@ class ImageWindow(QMainWindow):
         # if self.images:
         self.recursion_id = uuid.uuid4()  # 开始新的图片加载时更新标识符
         self.display_next_image(self.recursion_id)  # 传递当前标识符
+
 
     def display_next_image(self, current_id):
         '''
@@ -423,9 +447,11 @@ class ImageWindow(QMainWindow):
     def stop_analysis(self):
         self.is_on = False
         self.status_bar.showMessage("已中止")
+        record_log(self.log_file, self.user_name, "用户操作", "用户点击中止按钮")
 
     def continue_analysis(self):
         self.is_on = True
+        record_log(self.log_file, self.user_name, "用户操作", "用户点击继续按钮")
 
     def check_for_new_images(self):
         '''
@@ -444,7 +470,7 @@ class ImageWindow(QMainWindow):
             self.images.append(new_image)
             # self.show_image(new_image)
 
-    def addRow(self, col1_data, col2_data):
+    def addRow(self, col1_data, col2_data, isException=True):
         row_position = self.infoTextBox.rowCount()
         self.infoTextBox.insertRow(row_position)
 
@@ -458,8 +484,17 @@ class ImageWindow(QMainWindow):
         
         # 设置文本对齐方式为水平和竖直居中
         item1.setTextAlignment(Qt.AlignCenter)
-        item2.setTextAlignment(Qt.AlignTop | Qt.AlignHCenter)
+        item2.setTextAlignment(Qt.AlignCenter)
         
+        # 如果是异常的情况，设置字体颜色为红色
+        if isException:
+            redBrush = QBrush(QColor(128, 0, 0))  
+            item2.setForeground(redBrush)
+
+        else:
+            greenBrush = QBrush(QColor(0, 128, 0))  
+            item2.setForeground(greenBrush)
+
         # 将单元格项添加到表格
         self.infoTextBox.setItem(row_position, 0, item1)
         self.infoTextBox.setItem(row_position, 1, item2)
@@ -486,34 +521,42 @@ class ImageWindow(QMainWindow):
         #参数数据存入表格
         record_data(self.data_file, image_name, formatted_time, std2min, info, brightness)
 
-        #图像UI
+        #状态栏
         if not blocked:
             self.status_bar.showMessage("拍摄时间:"+formatted_time)
         else:
             self.status_bar.showMessage("图像被窗口遮挡")
 
+        #图像UI组件
         self.imageLabel.setPixmap(pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio))
         self.imageLabel.adjustSize()
 
         scaled_pixmap = pixmap.scaled(self.imageLabel.size(), aspectRatioMode=Qt.KeepAspectRatio)
         self.imageLabel.setPixmap(scaled_pixmap)
 
-        # 获取图像居中放置的位置
-        x_pos = (self.imageLabel.width() - scaled_pixmap.width()) // 2
-        y_pos = (self.imageLabel.height() - scaled_pixmap.height()) // 2
-
-        # 设置图像的位置
         self.imageLabel.setAlignment(Qt.AlignCenter)
-        self.imageLabel.setGeometry(x_pos, y_pos, scaled_pixmap.width(), scaled_pixmap.height())
 
         #更新参数
         update_info(info, self.area_data, self.elongation_data)
         self.std2min_data.append(std2min)
         self.brightness_data.append(brightness)
+
         #分析参数
         eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data, blocked, self.settings)
+        
+        #参数记录
         if eval_result:
-            self.addRow(formatted_time, eval_result)
+            self.addRow(formatted_time, eval_result, isException=True)
+            record_log(self.log_file, self.user_name, "图像状态", eval_result)
+            self.no_exception_count = 0  # 如果检测到异常，重置计数器
+        else:
+            self.no_exception_count += 1  # 未检测到异常，增加计数器
+
+        # 如果连续多张图像都没有异常，提示无异常
+        if self.no_exception_count >= self.settings['no_exception_count_threshold']:
+            self.addRow(formatted_time, "无异常", isException=False)
+            record_log(self.log_file, self.user_name, "图像状态", "无异常")
+            self.no_exception_count = 0  # 重置计数器以便新的计数开始
 
         if image_path not in self.processed_images: 
             self.processed_images.add(image_path)  

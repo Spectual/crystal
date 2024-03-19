@@ -2,6 +2,7 @@ import os
 from PyQt5.QtGui import QImage, QPixmap
 import numpy as np
 import time
+import datetime
 import csv
 
 def split_timestamp_from_filename(image_filename):
@@ -71,6 +72,12 @@ def init_data_file(data_file):
             writer = csv.writer(file)
             writer.writerow(['Timestamp', 'Datetime', 'Std2Min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R', 'Area_R', 'Brightness'])
 
+def init_log_file(log_file):
+    if not os.path.exists(log_file):
+        with open(log_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['时间', '操作员', '类型', '信息'])
+
 def record_data(data_file, timestamp, datetime, std2min, info, brightness):
     with open(data_file, mode='a', newline='') as file:
         writer = csv.writer(file)
@@ -85,6 +92,18 @@ def record_data(data_file, timestamp, datetime, std2min, info, brightness):
             info.get('bright_r', {}).get('elongation', ''),
             info.get('bright_r', {}).get('area', ''),
             brightness
+        ]
+        writer.writerow(data)
+
+def record_log(log_file, operator, log_level, message):
+    with open(log_file, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        cur_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        data = [
+            cur_time,
+            operator,
+            log_level,
+            message
         ]
         writer.writerow(data)
 

@@ -66,7 +66,7 @@ class PlotWindowBase(QWidget):
 
 class ElongationPlotWindow(PlotWindowBase):
     def __init__(self):
-        super().__init__("拉伸率变化", "拉伸率", "elongation")
+        super().__init__("近圆系数变化", "近圆系数", "elongation")
         self.plot_widget.setYRange(-0.2, 0.3)
 
     def plot_all_data(self):
@@ -197,9 +197,9 @@ class IntegratedPlotWindow(QWidget):
         self.std2min_tab = Std2minPlotWindow()
         self.brightness_tab = BrightnessPlotWindow()
 
-        self.tabs.addTab(self.elongation_tab, "拉伸率")
+        self.tabs.addTab(self.elongation_tab, "近圆系数")
         self.tabs.addTab(self.area_tab, "面积")
-        self.tabs.addTab(self.std2min_tab, "标准差/最小值")
+        self.tabs.addTab(self.std2min_tab, "标准差")
         self.tabs.addTab(self.brightness_tab, "亮度")
 
         layout = QVBoxLayout(self)

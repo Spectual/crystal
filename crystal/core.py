@@ -49,7 +49,7 @@ def run():
 
     # 使用定时器来模拟主窗口加载时间
     # QTimer.singleShot(3000, lambda: (splash.close(), plot_window.show(),  image_window.show()))
-    time.sleep(0)
+    time.sleep(3)
 
     splash.close()
     # plot_window.show()
