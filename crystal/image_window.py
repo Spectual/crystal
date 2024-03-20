@@ -1,6 +1,6 @@
 import os
 import glob
-from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QTextEdit,
+from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QSlider, QTextEdit,
                              QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton, QSplitter, QDialogButtonBox, QMessageBox, QDialog,
                              QLineEdit, QFormLayout, QHBoxLayout, QFileDialog, QSizePolicy, QSpacerItem)
 from PyQt5.QtGui import QPixmap, QFont, QBrush, QColor
@@ -240,24 +240,41 @@ class ImageWindow(QMainWindow):
         threshold_settings_layout = QFormLayout()
 
         # 创建并添加阈值设置控件
-        self.elongation_upper_threshold = QLineEdit(str(self.settings['elongation_upper_threshold']))
-        self.elongation_lower_threshold = QLineEdit(str(self.settings['elongation_lower_threshold']))
-        self.area_upper_threshold = QLineEdit(str(self.settings['area_upper_threshold']))
-        self.area_lower_threshold = QLineEdit(str(self.settings['area_lower_threshold']))
-        self.std_min_upper_threshold = QLineEdit(str(self.settings['std_min_upper_threshold']))
-        self.std_min_lower_threshold = QLineEdit(str(self.settings['std_min_lower_threshold']))
-        self.brightness_upper_threshold = QLineEdit(str(self.settings['brightness_upper_threshold']))
-        self.brightness_lower_threshold = QLineEdit(str(self.settings['brightness_lower_threshold']))
+        # self.elongation_upper_threshold = QLineEdit(str(self.settings['elongation_upper_threshold']))
+        # self.elongation_lower_threshold = QLineEdit(str(self.settings['elongation_lower_threshold']))
+        # self.area_upper_threshold = QLineEdit(str(self.settings['area_upper_threshold']))
+        # self.area_lower_threshold = QLineEdit(str(self.settings['area_lower_threshold']))
+        # self.std_min_upper_threshold = QLineEdit(str(self.settings['std_min_upper_threshold']))
+        # self.std_min_lower_threshold = QLineEdit(str(self.settings['std_min_lower_threshold']))
+        # self.brightness_upper_threshold = QLineEdit(str(self.settings['brightness_upper_threshold']))
+        # self.brightness_lower_threshold = QLineEdit(str(self.settings['brightness_lower_threshold']))
         self.no_exception_count_threshold_edit = QLineEdit(str(self.settings['no_exception_count_threshold']))
 
-        threshold_settings_layout.addRow("近圆系数 上阈值:", self.elongation_upper_threshold)
-        threshold_settings_layout.addRow("近圆系数 下阈值:", self.elongation_lower_threshold)
-        threshold_settings_layout.addRow("面积 上阈值:", self.area_upper_threshold)
-        threshold_settings_layout.addRow("面积 下阈值:", self.area_lower_threshold)
-        threshold_settings_layout.addRow("标准差/最小值 上阈值:", self.std_min_upper_threshold)
-        threshold_settings_layout.addRow("标准差/最小值 下阈值:", self.std_min_lower_threshold)
-        threshold_settings_layout.addRow("亮度 上阈值:", self.brightness_upper_threshold)
-        threshold_settings_layout.addRow("亮度 下阈值:", self.brightness_lower_threshold)
+        # threshold_settings_layout.addRow("近圆系数 上阈值:", self.elongation_upper_threshold)
+        # threshold_settings_layout.addRow("近圆系数 下阈值:", self.elongation_lower_threshold)
+        # threshold_settings_layout.addRow("面积 上阈值:", self.area_upper_threshold)
+        # threshold_settings_layout.addRow("面积 下阈值:", self.area_lower_threshold)
+        # threshold_settings_layout.addRow("标准差/最小值 上阈值:", self.std_min_upper_threshold)
+        # threshold_settings_layout.addRow("标准差/最小值 下阈值:", self.std_min_lower_threshold)
+        # threshold_settings_layout.addRow("亮度 上阈值:", self.brightness_upper_threshold)
+        # threshold_settings_layout.addRow("亮度 下阈值:", self.brightness_lower_threshold)
+
+        elongation_upper_threshold_widget, self.elongation_upper_threshold_slider, _ = self.create_threshold_slider(default_value=1, value=self.settings['elongation_upper_threshold'], min_value=0, max_value=2, title="近圆系数 上阈值", factor=10)
+        elongation_lower_threshold_widget, self.elongation_lower_threshold_slider, _ = self.create_threshold_slider(default_value=0, value=self.settings['elongation_lower_threshold'], min_value=-2, max_value=0, title="近圆系数 下阈值", factor=10)
+        
+        area_upper_threshold_widget, self.area_upper_threshold_slider, _ = self.create_threshold_slider(default_value=800, value=self.settings['area_upper_threshold'], min_value=0, max_value=3000, title="面积 上阈值")
+        area_lower_threshold_widget, self.area_lower_threshold_slider, _ = self.create_threshold_slider(default_value=-800, value=self.settings['area_lower_threshold'], min_value=-3000, max_value=0, title="面积 下阈值")
+
+        std_min_upper_threshold_widget, self.std_min_upper_threshold_slider, _ = self.create_threshold_slider(default_value=50, value=self.settings['std_min_upper_threshold'], min_value=0, max_value=200, title="标准差/最小值 上阈值")
+        std_min_lower_threshold_widget, self.std_min_lower_threshold_slider, _ = self.create_threshold_slider(default_value=-50, value=self.settings['std_min_lower_threshold'], min_value=-200, max_value=0, title="标准差/最小值 下阈值")
+
+        # 添加滑动条控件到布局
+        threshold_settings_layout.addWidget(elongation_upper_threshold_widget)
+        threshold_settings_layout.addWidget(elongation_lower_threshold_widget)
+        threshold_settings_layout.addWidget(area_upper_threshold_widget)
+        threshold_settings_layout.addWidget(area_lower_threshold_widget)
+        threshold_settings_layout.addWidget(std_min_upper_threshold_widget)
+        threshold_settings_layout.addWidget(std_min_lower_threshold_widget)
         threshold_settings_layout.addRow("无异常提示阈值:", self.no_exception_count_threshold_edit)
         
         threshold_settings_group.setLayout(threshold_settings_layout)
@@ -280,11 +297,42 @@ class ImageWindow(QMainWindow):
         if result == QDialog.Accepted:
             self.update_settings_from_dialog()
 
-    def create_threshold_layout(self, group_title, upper_threshold, lower_threshold):
-        layout = QFormLayout()
-        layout.addRow(group_title + " 上阈值:", upper_threshold)
-        layout.addRow(group_title + " 下阈值:", lower_threshold)
-        return layout
+    # def create_threshold_layout(self, group_title, upper_threshold, lower_threshold):
+    #     layout = QFormLayout()
+    #     layout.addRow(group_title + " 上阈值:", upper_threshold)
+    #     layout.addRow(group_title + " 下阈值:", lower_threshold)
+    #     return layout
+
+    def create_threshold_slider(self, default_value, min_value, max_value, title, value=0, factor=1):
+        slider = QSlider(Qt.Horizontal)
+        slider.setRange(min_value*factor, max_value*factor)
+        slider.setValue(value*factor)
+        # slider.setSingleStep(step)
+        
+        label = QLabel(str(value))
+        label.setMinimumWidth(30)
+        
+        # 更新标签显示滑动条的值
+        slider.valueChanged.connect(lambda value: label.setText(str(value/factor)))
+        
+        # 创建一个恢复默认值的按钮
+        reset_button = QPushButton("默认") # 从设置中获取默认值，如果没有则使用当前值
+        reset_button.clicked.connect(lambda: slider.setValue(default_value*factor))
+        
+        # 将滑动条、标签和按钮放入水平布局
+        layout = QHBoxLayout()
+        layout.addWidget(QLabel(title))
+        layout.addWidget(slider)
+        layout.addWidget(label)
+        layout.addWidget(reset_button)
+        
+        # 将布局包装在QWidget中
+        widget = QWidget()
+        widget.setLayout(layout)
+        
+        return widget, slider, label
+
+
 
     def update_settings_from_dialog(self):
         # 更新图像坐标和暗斑区域坐标
@@ -292,14 +340,12 @@ class ImageWindow(QMainWindow):
         self.dark_rect = (int(self.dark_rect_x1.text()), int(self.dark_rect_y1.text()), int(self.dark_rect_x2.text()), int(self.dark_rect_y2.text()))
         self.interval = max(10, float(self.interval_t.text()) * 1000)
         # 更新阈值
-        self.settings['elongation_upper_threshold'] = float(self.elongation_upper_threshold.text())
-        self.settings['elongation_lower_threshold'] = float(self.elongation_lower_threshold.text())
-        self.settings['area_upper_threshold'] = float(self.area_upper_threshold.text())
-        self.settings['area_lower_threshold'] = float(self.area_lower_threshold.text())
-        self.settings['std_min_upper_threshold'] = float(self.std_min_upper_threshold.text())
-        self.settings['std_min_lower_threshold'] = float(self.std_min_lower_threshold.text())
-        self.settings['brightness_upper_threshold'] = float(self.brightness_upper_threshold.text())
-        self.settings['brightness_lower_threshold'] = float(self.brightness_lower_threshold.text())
+        self.settings['elongation_upper_threshold'] = self.elongation_upper_threshold_slider.value()
+        self.settings['elongation_lower_threshold'] = self.elongation_lower_threshold_slider.value()
+        self.settings['area_upper_threshold'] = self.area_upper_threshold_slider.value()
+        self.settings['area_lower_threshold'] = self.area_lower_threshold_slider.value()
+        self.settings['std_min_upper_threshold'] = self.std_min_upper_threshold_slider.value()
+        self.settings['std_min_lower_threshold'] = self.std_min_lower_threshold_slider.value()
         self.settings['no_exception_count_threshold'] = int(self.no_exception_count_threshold_edit.text())
 
     def open_sync_settings_dialog(self):
