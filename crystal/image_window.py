@@ -157,7 +157,7 @@ class ImageWindow(QMainWindow):
         self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.std2min_data = []
         self.brightness_data = []
-        self.processed_images = set()
+        self.processed_images = []
 
         #操作员名称初始化
         self.user_name = "admin"
@@ -467,6 +467,7 @@ class ImageWindow(QMainWindow):
         self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.std2min_data = []
         self.brightness_data = []
+        self.processed_images = []
         self.current_index = -1
 
         # if self.images:
@@ -556,6 +557,13 @@ class ImageWindow(QMainWindow):
         #展示处理后的图像
         img = cut_image(image_path, self.image_coord)
         img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
+
+        #如果遮挡则用最近的正常图像替代,仅临时使用，后续需彻底解决
+        if blocked:
+            img = cut_image(self.not_blocked_img, self.image_coord)
+            img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
+            blocked = True
+
         std2min = compute_std_min_ratio(img, self.dark_rect) if not blocked else np.nan
         brightness = compute_brightness(img) if not blocked else np.nan
 
@@ -567,8 +575,14 @@ class ImageWindow(QMainWindow):
         #参数数据存入表格
         record_data(self.data_file, image_name, formatted_time, std2min, info, brightness)
 
+        #更新参数
+        update_info(info, self.area_data, self.elongation_data)
+        self.std2min_data.append(std2min)
+        self.brightness_data.append(brightness)
+
         #状态栏
         if not blocked:
+            self.not_blocked_img = image_path #保存最新没被遮挡的图像，用于替换后续被遮挡的图像
             self.status_bar.showMessage("拍摄时间:"+formatted_time)
         else:
             self.status_bar.showMessage("图像被窗口遮挡")
@@ -582,10 +596,6 @@ class ImageWindow(QMainWindow):
 
         self.imageLabel.setAlignment(Qt.AlignCenter)
 
-        #更新参数
-        update_info(info, self.area_data, self.elongation_data)
-        self.std2min_data.append(std2min)
-        self.brightness_data.append(brightness)
 
         #分析参数
         eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data, blocked, self.settings)
@@ -605,5 +615,9 @@ class ImageWindow(QMainWindow):
             self.no_exception_count = 0  # 重置计数器以便新的计数开始
 
         if image_path not in self.processed_images: 
-            self.processed_images.add(image_path)  
+            self.processed_images.append(image_path)  
             self.plot_window.update_plots(self.elongation_data, self.area_data, self.std2min_data, self.brightness_data)
+
+
+
+
