@@ -349,7 +349,13 @@ class ImageWindow(QMainWindow):
 
         # 信息类型选择
         self.typeComboBox = QComboBox()
-        layout.addWidget(self.typeComboBox)
+        self.infoComboBox = QComboBox()
+        infoTypeLayout = QHBoxLayout()
+        infoTypeLayout.addWidget(QLabel("信息类型:"))
+        infoTypeLayout.addWidget(self.typeComboBox)
+        infoTypeLayout.addWidget(QLabel("信息内容:"))
+        infoTypeLayout.addWidget(self.infoComboBox)
+        layout.addLayout(infoTypeLayout)
 
         # 结果显示
         self.resultsList = QListWidget()
@@ -362,18 +368,24 @@ class ImageWindow(QMainWindow):
 
         self.load_csv_files()
         self.fileComboBox.currentTextChanged.connect(self.update_types_and_default_dates)
+        self.typeComboBox.currentTextChanged.connect(self.update_info_list)
 
+        dialog.setStyleSheet("QWidget {font-size: 16px}")
+        dialog.resize(800, 600)
         dialog.exec_()
 
     def load_csv_files(self):
         if system == "Windows":
             logs_dir = '.\\logs'
-        if system == "Darwin":
+        elif system == "Darwin":
             logs_dir = './logs'
+        else:
+            logs_dir = './logs'  # 默认路径
         files = [f for f in os.listdir(logs_dir) if f.endswith('.csv')]
         self.fileComboBox.addItems(sorted(files))
         if files:
             self.update_types_and_default_dates(self.fileComboBox.currentText())
+            self.update_info_list()
 
     def update_types_and_default_dates(self, selected_file):
         # 更新默认的开始时间和结束时间
@@ -396,29 +408,62 @@ class ImageWindow(QMainWindow):
             self.typeComboBox.clear()
             self.typeComboBox.addItems(['所有'] + sorted(types))
 
+    def update_info_list(self, selected_type=None):
+        if not selected_type:
+            selected_type = self.typeComboBox.currentText()
+
+        self.infoComboBox.clear()
+        self.infoComboBox.addItem("所有")
+
+        if selected_type == "所有" or not selected_type:
+            return
+
+        selected_file = self.fileComboBox.currentText()
+        filepath = os.path.join('./logs', selected_file)
+
+        with open(filepath, 'rb') as f:
+            raw_data = f.read(4096)
+            result = chardet.detect(raw_data)
+            file_encoding = result['encoding']
+
+        info_set = set()
+        with open(filepath, newline='', encoding=file_encoding) as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if row['类型'] == selected_type:
+                    info_set.add(row['信息'])
+
+        # 将找到的信息添加到下拉框中
+        self.infoComboBox.addItems(sorted(info_set))
+
     def load_data(self):
         selected_file = self.fileComboBox.currentText()
         start_time = self.startTimeEdit.dateTime().toPyDateTime()
         end_time = self.endTimeEdit.dateTime().toPyDateTime()
         selected_type = self.typeComboBox.currentText()
+        selected_info = self.infoComboBox.currentText()  # 获取选定的信息
 
         self.resultsList.clear()
+
         if system == "Windows":
             filepath = os.path.join('.\\logs', selected_file)
-        if system == "Darwin":
+        elif system == "Darwin":
             filepath = os.path.join('./logs', selected_file)
+
         with open(filepath, 'rb') as f:
-            raw_data = f.read(4096)  # 读取文件的前4096字节来进行编码探测
+            raw_data = f.read(4096)
             result = chardet.detect(raw_data)
             file_encoding = result['encoding']
+
         with open(filepath, newline='', encoding=file_encoding) as csvfile:
             reader = csv.DictReader(csvfile)
 
             for row in reader:
                 row_time = datetime.datetime.strptime(row['时间'], '%Y-%m-%d_%H-%M-%S')
 
-                if start_time <= row_time <= end_time:
-                    if selected_type == '所有' or row['类型'] == selected_type:
+                if start_time <= row_time <= end_time and (selected_type == '所有' or row['类型'] == selected_type):
+                    # 当选择“所有”信息或信息匹配时，添加记录到列表
+                    if selected_info == "所有" or row['信息'] == selected_info:
                         display_text = f"{row['时间']} - {row['操作员']} - {row['类型']} - {row['信息']}"
                         self.resultsList.addItem(display_text)
 
