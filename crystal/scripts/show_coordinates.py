@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import filedialog
 from PIL import Image, ImageTk
 
+
 def load_image():
     filepath = filedialog.askopenfilename()
     if filepath:
@@ -10,9 +11,11 @@ def load_image():
         label.config(image=photo)
         label.image = photo
 
+
 def show_coordinates(event):
     x, y = event.x, event.y
     coordinates_var.set(f"Coordinates: ({x}, {y})")
+
 
 root = tk.Tk()
 root.title("Image Viewer with Coordinates")
