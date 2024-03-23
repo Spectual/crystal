@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QApplication, QSplashScreen, QMainWindow
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
 from .image_window import ImageWindow
-from .plot_window import AreaPlotWindow, ElongationPlotWindow, Std2minPlotWindow, BrightnessPlotWindow, IntegratedPlotWindow
+from .plot_window import AreaPlotWindow, ElongationPlotWindow, Std2minPlotWindow, IntegratedPlotWindow
 import argparse
 import time
 import qdarkstyle

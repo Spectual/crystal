@@ -1,30 +1,34 @@
 import cv2
 import numpy as np
+from scipy.stats import chisquare
 import os
 import matplotlib.pyplot as plt
 from PIL import Image
 import time
 from .utils import timestamp_to_datetime, split_timestamp_from_filename
 
+import random
 
-def cut_image(image_path, image_area):
-    # print("---", image_path)
-    img = cv2.imread(image_path)
-    # print(len(img))
-    # print("---")
+def cut_image(image_path, image_area, last_readable_img):
     x1, y1, x2, y2 = image_area
+
+    #如果读取图像出现错误，使用上一张正常读取的图像取代
     try:
+        img = cv2.imread(image_path)
         img = img[y1:y2, x1:x2]
         img = cv2.resize(img, (640, 480))
+    # except:
+    #     time.sleep(3)
+    #     img = cv2.imread(image_path)
+    #     img = np.zeros((480, 640, 3), dtype=np.uint8)
+    #     print(image_path + "裁切失败")
     except:
-        time.sleep(3)
-        img = cv2.imread(image_path)
-        img = np.zeros((480, 640, 3), dtype=np.uint8)
-        print(image_path + "裁切失败")
+        img = last_readable_img
+        print("readable warning")
     return img
 
 
-'''def is_blocked(img):
+def is_line_detected(img):
     # 判断图像区域是否被其他窗口遮挡
 
     edges = cv2.Canny(img, 50, 150, apertureSize=3)
@@ -33,31 +37,74 @@ def cut_image(image_path, image_area):
     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=200, maxLineGap=2)
 
     return lines is not None
-'''
+
+
+
+# def is_line_detected(img):
+#     '''
+#     检测是否存在直线
+#     '''
+#     # 获取图像的尺寸
+#     height, width = img.shape[:2]
+
+#     # 计算右上方70%区域的坐标
+#     top_row = int(height * 0.05)  # 从顶部5%开始到80%的高度
+#     bottom_row = int(height * 0.8)
+#     left_col = int(width * 0.2)  # 从左侧20%开始到95%宽度，这样就是右侧70%的宽度
+#     right_col = int(width * 0.95)
+
+#     # 提取右上方70%的区域
+#     roi = img[top_row:bottom_row, left_col:right_col]
+
+#     # 在ROI上应用边缘检测
+#     edges = cv2.Canny(roi, 50, 150, apertureSize=3)
+
+#     # 在边缘检测后的图像中检测直线
+#     lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=200, maxLineGap=10)
+
+#     # 返回是否检测到直线
+#     return lines is not None
+
+def is_crystal_img(img):
+    '''
+    通过卡方距离判断图像正常与否
+    '''
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = img.astype(np.float64) / 255.0
+
+    std_img_path = os.path.join(os.getcwd(), 'imgs', 'standard.png') #标准图像路径
+    std_img = cv2.imread(std_img_path)
+    std_img = cv2.cvtColor(std_img, cv2.COLOR_BGR2GRAY)
+    std_img = std_img.astype(np.float64) / 255.0
+
+    threshold = 3 #卡方距离阈值
+
+    cur_hist, _ = np.histogram(img, bins=256, range=(0, 1)) #当前图像直方图
+    cur_hist = cur_hist.astype(np.float64)
+    cur_hist = cur_hist / float(np.sum(cur_hist))
+    std_hist, _ = np.histogram(std_img, bins=256, range=(0, 1)) #标准样本直方图
+    std_hist = std_hist.astype(np.float64)
+    std_hist = std_hist / float(np.sum(std_hist)) 
+
+    distance, _ = chisquare(std_hist, cur_hist) #计算距离
+
+    if distance < threshold:
+        return True
+    else:
+        return False
 
 
 def is_blocked(img):
-    # 获取图像的尺寸
-    height, width = img.shape[:2]
+    is_line = is_line_detected(img)
+    is_crystal = is_crystal_img(img)
 
-    # 计算右上方70%区域的坐标
-    top_row = int(height * 0.05)  # 从顶部5%开始到80%的高度
-    bottom_row = int(height * 0.8)
-    left_col = int(width * 0.2)  # 从左侧20%开始到95%宽度，这样就是右侧70%的宽度
-    right_col = int(width * 0.95)
+    if is_line:
+        return True
 
-    # 提取右上方70%的区域
-    roi = img[top_row:bottom_row, left_col:right_col]
+    if not is_crystal:
+        return True
 
-    # 在ROI上应用边缘检测
-    edges = cv2.Canny(roi, 50, 150, apertureSize=3)
-
-    # 在边缘检测后的图像中检测直线
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 100, minLineLength=200, maxLineGap=10)
-
-    # 返回是否检测到直线
-    return lines is not None
-
+    return False
 
 def preprocess_image(img):
     '''
@@ -86,7 +133,6 @@ def detect_and_name_spots(bin_img, img):
 
     ellipses = []
     bright_spots_info = {}
-    brightness = compute_brightness(img)
 
     if not blocked:
         for i, cnt in enumerate(contours):
@@ -176,34 +222,6 @@ def compute_std_min_ratio(img, rect):
         return float('inf')
 
     return std_dev
-
-
-def compute_brightness(img):
-    image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    mask = (image > 10)
-
-    filtered_image = image[mask]
-
-    height, width = image.shape
-    upper_part_mask = mask[:height // 2, :]
-    middle_part_mask = mask[height // 4: 3 * height // 4, :]
-
-    upper_part = image[:height // 2, :][upper_part_mask[:height // 2, :]]
-    middle_part = image[height // 4: 3 * height // 4, :][middle_part_mask]
-
-    upper_brightness = np.mean(upper_part) if upper_part.size > 0 else 0
-    middle_brightness = np.mean(middle_part) if middle_part.size > 0 else 0
-    overall_brightness = np.mean(filtered_image) if filtered_image.size > 0 else 0
-
-    upper_weight = 0.4
-    middle_weight = 0.4
-    overall_weight = 0.2
-
-    weighted_avg_brightness = (upper_brightness * upper_weight +
-                               middle_brightness * middle_weight +
-                               overall_brightness * overall_weight)
-
-    return weighted_avg_brightness
 
 def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, blocked, settings):
     image_filename = os.path.basename(image_path)

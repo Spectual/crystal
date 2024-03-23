@@ -77,8 +77,8 @@ def init_data_file(data_file):
         with open(data_file, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow(
-                ['Timestamp', 'Datetime', 'Std2Min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R',
-                 'Area_R', 'Brightness'])
+                ['Timestamp', 'Datetime', 'Std2min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R',
+                 'Area_R'])
 
 
 def init_log_file(log_file):
@@ -93,10 +93,10 @@ def init_log_file(log_file):
     if not os.path.exists(log_file):
         with open(log_file, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
-            writer.writerow(['时间', '操作员', '类型', '信息'])
+            writer.writerow(['时间', '操作员', '类型', '拍摄时间', '信息'])
 
 
-def record_data(data_file, timestamp, datetime, std2min, info, brightness):
+def record_data(data_file, timestamp, datetime, std2min, info):
     with open(data_file, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         data = [
@@ -109,12 +109,11 @@ def record_data(data_file, timestamp, datetime, std2min, info, brightness):
             info.get('bright_m', {}).get('area', ''),
             info.get('bright_r', {}).get('elongation', ''),
             info.get('bright_r', {}).get('area', ''),
-            brightness
         ]
         writer.writerow(data)
 
 
-def record_log(log_file, operator, log_level, message):
+def record_log(log_file, operator, log_level, message, shot_time=""):
     with open(log_file, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         cur_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -122,6 +121,7 @@ def record_log(log_file, operator, log_level, message):
             cur_time,
             operator,
             log_level,
+            shot_time,
             message
         ]
         writer.writerow(data)

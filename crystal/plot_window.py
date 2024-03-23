@@ -155,32 +155,6 @@ class Std2minPlotWindow(PlotWindowBase):
         # 添加图例
         self.plot_widget.addLegend(offset=(10, 10))
 
-class BrightnessPlotWindow(PlotWindowBase):
-    def __init__(self):
-        super().__init__("亮度变化", "亮度", "brightness")
-        self.plot_widget.setYRange(-20, 20)
-
-    def plot_all_data(self):
-        data_length = len(self.data_dict)
-        start_index = max(0, data_length - 30)
-        x = range(len(self.data_dict))
-
-        self.plot_widget.plot(x, [bright - self.data_dict[0] for bright in self.data_dict], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='亮度')
-
-        # 添加图例
-        self.plot_widget.addLegend(offset=(10, 10))
-
-    def plot_data(self):
-        data_length = len(self.data_dict)
-        start_index = max(0, data_length - 30)
-        x = range(start_index, data_length)
-
-        brightness_last_30 = self.data_dict[-30:]
-        self.plot_widget.plot(x, [bright - self.data_dict[0] for bright in brightness_last_30], pen=mkPen('#5092CF', width=5), symbol='o', symbolSize=5, name='亮度')
-
-        # 添加图例
-        self.plot_widget.addLegend(offset=(10, 10))
-
 class IntegratedPlotWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -195,19 +169,16 @@ class IntegratedPlotWindow(QWidget):
         self.elongation_tab = ElongationPlotWindow()
         self.area_tab = AreaPlotWindow()
         self.std2min_tab = Std2minPlotWindow()
-        self.brightness_tab = BrightnessPlotWindow()
 
         self.tabs.addTab(self.elongation_tab, "近圆系数")
         self.tabs.addTab(self.area_tab, "面积")
         self.tabs.addTab(self.std2min_tab, "标准差")
-        self.tabs.addTab(self.brightness_tab, "亮度")
 
         layout = QVBoxLayout(self)
         layout.addWidget(self.tabs)
 
 
-    def update_plots(self, elongation_data, area_data, std2min_data, brightness_data):
+    def update_plots(self, elongation_data, area_data, std2min_data):
         self.elongation_tab.update_plot(elongation_data)
         self.area_tab.update_plot(area_data)
         self.std2min_tab.update_plot(std2min_data)
-        self.brightness_tab.update_plot(brightness_data)

@@ -6,9 +6,8 @@ from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVB
                              QSizePolicy, QSpacerItem, QComboBox, QDateTimeEdit, QListWidget)
 from PyQt5.QtGui import QPixmap, QFont, QBrush, QColor
 from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate
-from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, compute_brightness, cut_image
-from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, \
-    split_timestamp_from_filename, update_first_info, init_data_file, init_log_file, record_data, record_log
+from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, cut_image
+from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename, update_first_info, init_data_file, init_log_file, record_data, record_log
 import time
 import datetime
 import platform
@@ -43,6 +42,12 @@ class ImageWindow(QMainWindow):
 
         # 无异常计数器
         self.no_exception_count = 0
+
+        # 未被遮挡的图像初始化
+        self.not_blocked_img = r"imgs\1702705095.bmp"
+
+        # 正在处理的图像变量，存储为图像而非路径，初始化为黑色图像
+        self.last_readable_img = np.zeros((480, 640, 3), dtype=np.uint8)
 
         self.setWindowTitle("IBAD晶体生长过程分析系统")
         self.move(100, 100)
@@ -166,21 +171,20 @@ class ImageWindow(QMainWindow):
         self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.std2min_data = []
-        self.brightness_data = []
         self.processed_images = []
 
         # 操作员名称初始化
         self.user_name = "admin"
 
+        #程序启动时间
+        self.start_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
         # 数据表格文件初始化
-        self.data_file = 'data.csv'
+        self.data_file = os.path.join(os.getcwd(), "params", (self.start_time + ".csv"))
         init_data_file(self.data_file)
 
         # 日志表格文件初始化
-        if system == "Windows":
-            self.log_file = "logs\\" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".csv"
-        if system == "Darwin":
-            self.log_file = "logs/" + datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".csv"
+        self.log_file = os.path.join(os.getcwd(), "logs", (self.start_time + ".csv"))
         init_log_file(self.log_file)
 
         # 阈值参数
@@ -191,8 +195,6 @@ class ImageWindow(QMainWindow):
             'area_lower_threshold': -800,
             'std_min_upper_threshold': 50,
             'std_min_lower_threshold': -50,
-            'brightness_upper_threshold': 255,
-            'brightness_lower_threshold': 0,
             'no_exception_count_threshold': 30
         }
 
@@ -250,57 +252,77 @@ class ImageWindow(QMainWindow):
 
         # 阈值设置
         threshold_settings_group = QGroupBox("阈值设置")
-        threshold_settings_layout = QFormLayout()
+        threshold_settings_layout = QGridLayout()
 
         # 创建并添加阈值设置控件
-        # self.elongation_upper_threshold = QLineEdit(str(self.settings['elongation_upper_threshold']))
-        # self.elongation_lower_threshold = QLineEdit(str(self.settings['elongation_lower_threshold']))
-        # self.area_upper_threshold = QLineEdit(str(self.settings['area_upper_threshold']))
-        # self.area_lower_threshold = QLineEdit(str(self.settings['area_lower_threshold']))
-        # self.std_min_upper_threshold = QLineEdit(str(self.settings['std_min_upper_threshold']))
-        # self.std_min_lower_threshold = QLineEdit(str(self.settings['std_min_lower_threshold']))
-        # self.brightness_upper_threshold = QLineEdit(str(self.settings['brightness_upper_threshold']))
-        # self.brightness_lower_threshold = QLineEdit(str(self.settings['brightness_lower_threshold']))
-        self.no_exception_count_threshold_edit = QLineEdit(str(self.settings['no_exception_count_threshold']))
+        self.no_exception_count_threshold_widgets = self.create_threshold_slider(
+            default_value=30, value=self.settings['no_exception_count_threshold'], min_value=1, max_value=100,
+            title="无异常提示阈值:", factor=1)
 
-        # threshold_settings_layout.addRow("近圆系数 上阈值:", self.elongation_upper_threshold)
-        # threshold_settings_layout.addRow("近圆系数 下阈值:", self.elongation_lower_threshold)
-        # threshold_settings_layout.addRow("面积 上阈值:", self.area_upper_threshold)
-        # threshold_settings_layout.addRow("面积 下阈值:", self.area_lower_threshold)
-        # threshold_settings_layout.addRow("标准差/最小值 上阈值:", self.std_min_upper_threshold)
-        # threshold_settings_layout.addRow("标准差/最小值 下阈值:", self.std_min_lower_threshold)
-        # threshold_settings_layout.addRow("亮度 上阈值:", self.brightness_upper_threshold)
-        # threshold_settings_layout.addRow("亮度 下阈值:", self.brightness_lower_threshold)
-
-        elongation_upper_threshold_widget, self.elongation_upper_threshold_slider, _ = self.create_threshold_slider(
+        self.elongation_upper_threshold_widgets = self.create_threshold_slider(
             default_value=1, value=self.settings['elongation_upper_threshold'], min_value=0, max_value=2,
-            title="近圆系数 上阈值", factor=10)
-        elongation_lower_threshold_widget, self.elongation_lower_threshold_slider, _ = self.create_threshold_slider(
+            title="近圆系数 上阈值:", factor=20)
+        
+        self.elongation_lower_threshold_widgets = self.create_threshold_slider(
             default_value=0, value=self.settings['elongation_lower_threshold'], min_value=-2, max_value=0,
-            title="近圆系数 下阈值", factor=10)
+            title="近圆系数 下阈值:", factor=20)
 
-        area_upper_threshold_widget, self.area_upper_threshold_slider, _ = self.create_threshold_slider(
+        self.area_upper_threshold_widgets = self.create_threshold_slider(
             default_value=800, value=self.settings['area_upper_threshold'], min_value=0, max_value=3000,
-            title="面积 上阈值")
-        area_lower_threshold_widget, self.area_lower_threshold_slider, _ = self.create_threshold_slider(
+            title="面积 上阈值:")
+
+        self.area_lower_threshold_widgets = self.create_threshold_slider(
             default_value=-800, value=self.settings['area_lower_threshold'], min_value=-3000, max_value=0,
-            title="面积 下阈值")
+            title="面积 下阈值:")
 
-        std_min_upper_threshold_widget, self.std_min_upper_threshold_slider, _ = self.create_threshold_slider(
+        self.std_min_upper_threshold_widgets = self.create_threshold_slider(
             default_value=50, value=self.settings['std_min_upper_threshold'], min_value=0, max_value=200,
-            title="标准差/最小值 上阈值")
-        std_min_lower_threshold_widget, self.std_min_lower_threshold_slider, _ = self.create_threshold_slider(
-            default_value=-50, value=self.settings['std_min_lower_threshold'], min_value=-200, max_value=0,
-            title="标准差/最小值 下阈值")
+            title="标准差 上阈值:")
 
-        # 添加滑动条控件到布局
-        threshold_settings_layout.addWidget(elongation_upper_threshold_widget)
-        threshold_settings_layout.addWidget(elongation_lower_threshold_widget)
-        threshold_settings_layout.addWidget(area_upper_threshold_widget)
-        threshold_settings_layout.addWidget(area_lower_threshold_widget)
-        threshold_settings_layout.addWidget(std_min_upper_threshold_widget)
-        threshold_settings_layout.addWidget(std_min_lower_threshold_widget)
-        threshold_settings_layout.addRow("无异常提示阈值:", self.no_exception_count_threshold_edit)
+        self.std_min_lower_threshold_widgets = self.create_threshold_slider(
+            default_value=-50, value=self.settings['std_min_lower_threshold'], min_value=-200, max_value=0,
+            title="标准差 下阈值:")
+
+        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[0], 0, 0)
+        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[1], 0, 1)
+        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[2], 0, 2)
+        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[3], 0, 3)
+
+        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[0], 1, 0)
+        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[1], 1, 1)
+        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[2], 1, 2)
+        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[3], 1, 3)
+
+        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[0], 2, 0)
+        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[1], 2, 1)
+        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[2], 2, 2)
+        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[3], 2, 3)
+
+        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[0], 3, 0)
+        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[1], 3, 1)
+        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[2], 3, 2)
+        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[3], 3, 3)
+
+        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[0], 4, 0)
+        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[1], 4, 1)
+        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[2], 4, 2)
+        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[3], 4, 3)
+
+        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[0], 5, 0)
+        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[1], 5, 1)
+        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[2], 5, 2)
+        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[3], 5, 3)
+
+        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[0], 6,0)
+        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[1], 6,1)
+        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[2], 6,2)
+        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[3], 6,3)
+
+
+        # threshold_settings_layout.addWidget(self.elongation_upper_threshold_slider, 0, 1)
+        # threshold_settings_layout.addWidget(upper_button, 0, 2)
+
+
 
         threshold_settings_group.setLayout(threshold_settings_layout)
 
@@ -322,11 +344,55 @@ class ImageWindow(QMainWindow):
         if result == QDialog.Accepted:
             self.update_settings_from_dialog()
 
-    # def create_threshold_layout(self, group_title, upper_threshold, lower_threshold):
-    #     layout = QFormLayout()
-    #     layout.addRow(group_title + " 上阈值:", upper_threshold)
-    #     layout.addRow(group_title + " 下阈值:", lower_threshold)
-    #     return layout
+    def create_threshold_slider(self, default_value, min_value, max_value, title, value=0, factor=1):
+
+        title = QLabel(title)
+
+        slider = QSlider(Qt.Horizontal)
+        slider.setRange(min_value * factor, max_value * factor)
+        slider.setValue(value * factor)
+        # slider.setSingleStep(step)
+
+        label = QLabel(str(value))
+        label.setMinimumWidth(60)
+
+        # 更新标签显示滑动条的值
+        slider.valueChanged.connect(lambda value: label.setText(str(value / factor)))
+
+        # 创建一个恢复默认值的按钮
+        reset_button = QPushButton("默认")  # 从设置中获取默认值，如果没有则使用当前值
+        reset_button.clicked.connect(lambda: slider.setValue(default_value * factor))
+
+        # 将滑动条、标签和按钮放入水平布局
+        # layout = QHBoxLayout()
+        # # layout.addWidget(QLabel(title))
+        # layout.addWidget(slider)
+        # layout.addWidget(label)
+        # layout.addWidget(reset_button)
+
+        # # 将布局包装在QWidget中
+        # widget = QWidget()
+        # widget.setLayout(layout)
+
+        return [title, slider, label, reset_button]
+
+    def update_settings_from_dialog(self):
+        # 更新图像坐标和暗斑区域坐标
+        self.image_coord = (
+            int(self.image_coord_x1.text()), int(self.image_coord_y1.text()), int(self.image_coord_x2.text()),
+            int(self.image_coord_y2.text()))
+        self.dark_rect = (int(self.dark_rect_x1.text()), int(self.dark_rect_y1.text()), int(self.dark_rect_x2.text()),
+                          int(self.dark_rect_y2.text()))
+        self.interval = max(10, float(self.interval_t.text()) * 1000)
+        # 更新阈值
+        self.settings['elongation_upper_threshold'] = self.elongation_upper_threshold_widgets[1].value() / 20
+        self.settings['elongation_lower_threshold'] = self.elongation_lower_threshold_widgets[1].value() / 20
+        self.settings['area_upper_threshold'] = self.area_upper_threshold_widgets[1].value()
+        self.settings['area_lower_threshold'] = self.area_lower_threshold_widgets[1].value()
+        self.settings['std_min_upper_threshold'] = self.std_min_upper_threshold_widgets[1].value()
+        self.settings['std_min_lower_threshold'] = self.std_min_lower_threshold_widgets[1].value()
+        self.settings['no_exception_count_threshold'] = self.no_exception_count_threshold_widgets[1].value()
+
 
     def open_statistics_dialog(self):
         dialog = QDialog(self)
@@ -375,12 +441,8 @@ class ImageWindow(QMainWindow):
         dialog.exec_()
 
     def load_csv_files(self):
-        if system == "Windows":
-            logs_dir = '.\\logs'
-        elif system == "Darwin":
-            logs_dir = './logs'
-        else:
-            logs_dir = './logs'  # 默认路径
+
+        logs_dir = os.path.join(os.getcwd(), 'logs')  # 默认路径
         files = [f for f in os.listdir(logs_dir) if f.endswith('.csv')]
         self.fileComboBox.addItems(sorted(files))
         if files:
@@ -399,7 +461,7 @@ class ImageWindow(QMainWindow):
             pass
 
         # 根据选择的 CSV 文件更新类型下拉框
-        selected_file_path = os.path.join('./logs', selected_file)
+        selected_file_path = os.path.join(os.getcwd(), 'logs', selected_file)
         with open(selected_file_path, newline='') as csvfile:
             reader = csv.DictReader(csvfile)
             types = set()
@@ -445,10 +507,7 @@ class ImageWindow(QMainWindow):
 
         self.resultsList.clear()
 
-        if system == "Windows":
-            filepath = os.path.join('.\\logs', selected_file)
-        elif system == "Darwin":
-            filepath = os.path.join('./logs', selected_file)
+        filepath = os.path.join(os.getcwd(), 'logs', selected_file)
 
         with open(filepath, 'rb') as f:
             raw_data = f.read(4096)
@@ -464,54 +523,8 @@ class ImageWindow(QMainWindow):
                 if start_time <= row_time <= end_time and (selected_type == '所有' or row['类型'] == selected_type):
                     # 当选择“所有”信息或信息匹配时，添加记录到列表
                     if selected_info == "所有" or row['信息'] == selected_info:
-                        display_text = f"{row['时间']} - {row['操作员']} - {row['类型']} - {row['信息']}"
+                        display_text = f"{row['时间']} - {row['操作员']} - {row['类型']} - {row['拍摄时间']} - {row['信息']}"
                         self.resultsList.addItem(display_text)
-
-    def create_threshold_slider(self, default_value, min_value, max_value, title, value=0, factor=1):
-        slider = QSlider(Qt.Horizontal)
-        slider.setRange(min_value * factor, max_value * factor)
-        slider.setValue(value * factor)
-        # slider.setSingleStep(step)
-
-        label = QLabel(str(value))
-        label.setMinimumWidth(30)
-
-        # 更新标签显示滑动条的值
-        slider.valueChanged.connect(lambda value: label.setText(str(value / factor)))
-
-        # 创建一个恢复默认值的按钮
-        reset_button = QPushButton("默认")  # 从设置中获取默认值，如果没有则使用当前值
-        reset_button.clicked.connect(lambda: slider.setValue(default_value * factor))
-
-        # 将滑动条、标签和按钮放入水平布局
-        layout = QHBoxLayout()
-        layout.addWidget(QLabel(title))
-        layout.addWidget(slider)
-        layout.addWidget(label)
-        layout.addWidget(reset_button)
-
-        # 将布局包装在QWidget中
-        widget = QWidget()
-        widget.setLayout(layout)
-
-        return widget, slider, label
-
-    def update_settings_from_dialog(self):
-        # 更新图像坐标和暗斑区域坐标
-        self.image_coord = (
-            int(self.image_coord_x1.text()), int(self.image_coord_y1.text()), int(self.image_coord_x2.text()),
-            int(self.image_coord_y2.text()))
-        self.dark_rect = (int(self.dark_rect_x1.text()), int(self.dark_rect_y1.text()), int(self.dark_rect_x2.text()),
-                          int(self.dark_rect_y2.text()))
-        self.interval = max(10, float(self.interval_t.text()) * 1000)
-        # 更新阈值
-        self.settings['elongation_upper_threshold'] = self.elongation_upper_threshold_slider.value()
-        self.settings['elongation_lower_threshold'] = self.elongation_lower_threshold_slider.value()
-        self.settings['area_upper_threshold'] = self.area_upper_threshold_slider.value()
-        self.settings['area_lower_threshold'] = self.area_lower_threshold_slider.value()
-        self.settings['std_min_upper_threshold'] = self.std_min_upper_threshold_slider.value()
-        self.settings['std_min_lower_threshold'] = self.std_min_lower_threshold_slider.value()
-        self.settings['no_exception_count_threshold'] = int(self.no_exception_count_threshold_edit.text())
 
     def open_sync_settings_dialog(self):
         # 打开文件同步设置对话框的逻辑
@@ -564,15 +577,13 @@ class ImageWindow(QMainWindow):
             relative_path = os.path.relpath(selected_file_path)
 
             image_path = relative_path
-            img = cut_image(image_path, self.image_coord)
+            img = cut_image(image_path, self.image_coord, self.last_readable_img)
             img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
-            std2min = compute_std_min_ratio(img, self.dark_rect) if not blocked else np.nan
-            brightness = compute_brightness(img) if not blocked else np.nan
+            std2min = compute_std_min_ratio(img, self.dark_rect) 
 
             # 更新参数
             update_first_info(info, self.area_data, self.elongation_data)
             self.std2min_data.insert(0, std2min)
-            self.brightness_data.insert(0, brightness)
 
             # self.plot_window.update_plots(self.elongation_data, self.area_data, self.std2min_data, self.brightness_data)
         else:
@@ -609,17 +620,17 @@ class ImageWindow(QMainWindow):
         # folder_path = r".\data\73"
         self.images = []
         # 如果是第一次加载则按默认路径
-        if self.is_first_load:
-            if system == "Windows":
-                folder_path = r".\data\test"
-            if system == "Darwin":
-                # folder_path = "/Volumes/Avocado/crystal/data/2-4"
-                folder_path = "data/73"
+        # if self.is_first_load:
+        #     if system == "Windows":
+        #         folder_path = r".\data\test"
+        #     if system == "Darwin":
+        #         # folder_path = "/Volumes/Avocado/crystal/data/2-4"
+        #         folder_path = "data/73"
 
-        else:
-            folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
-            if not folder_path:
-                return
+        # else:
+        folder_path = QFileDialog.getExistingDirectory(self, "选择文件夹")
+        if not folder_path:
+            return
 
         record_log(self.log_file, self.user_name, "系统事件", "加载图像文件夹:" + folder_path)
         self.current_folder = folder_path
@@ -631,7 +642,6 @@ class ImageWindow(QMainWindow):
         self.area_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.elongation_data = {'bright_l': [], 'bright_m': [], 'bright_r': []}
         self.std2min_data = []
-        self.brightness_data = []
         self.processed_images = []
         self.current_index = -1
 
@@ -718,17 +728,16 @@ class ImageWindow(QMainWindow):
 
     def show_image(self, image_path):
         # 展示处理后的图像
-        img = cut_image(image_path, self.image_coord)
+        img = cut_image(image_path, self.image_coord, self.last_readable_img)
+        self.last_readable_img = img
         img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
-
         # 如果遮挡则用最近的正常图像替代,仅临时使用，后续需彻底解决
         if blocked:
-            img = cut_image(self.not_blocked_img, self.image_coord)
+            img = cut_image(self.not_blocked_img, self.image_coord, self.last_readable_img)
             img_with_labels, info, blocked = spot_detection(img, self.dark_rect)
             blocked = True
 
-        std2min = compute_std_min_ratio(img, self.dark_rect) if not blocked else np.nan
-        brightness = compute_brightness(img) if not blocked else np.nan
+        std2min = compute_std_min_ratio(img, self.dark_rect)
 
         pixmap = convert_image_for_display(img_with_labels)
 
@@ -736,12 +745,11 @@ class ImageWindow(QMainWindow):
         formatted_time = timestamp_to_datetime(image_name)
 
         # 参数数据存入表格
-        record_data(self.data_file, image_name, formatted_time, std2min, info, brightness)
+        record_data(self.data_file, image_name, formatted_time, std2min, info)
 
         # 更新参数
         update_info(info, self.area_data, self.elongation_data)
         self.std2min_data.append(std2min)
-        self.brightness_data.append(brightness)
 
         # 状态栏
         if not blocked:
@@ -766,7 +774,7 @@ class ImageWindow(QMainWindow):
         # 参数记录
         if eval_result:
             self.addRow(formatted_time, eval_result, isException=True)
-            record_log(self.log_file, self.user_name, "图像状态", eval_result)
+            record_log(self.log_file, self.user_name, "图像状态", eval_result, formatted_time)
             self.no_exception_count = 0  # 如果检测到异常，重置计数器
         else:
             self.no_exception_count += 1  # 未检测到异常，增加计数器
@@ -774,9 +782,9 @@ class ImageWindow(QMainWindow):
         # 如果连续多张图像都没有异常，提示无异常
         if self.no_exception_count >= self.settings['no_exception_count_threshold']:
             self.addRow(formatted_time, "无异常", isException=False)
-            record_log(self.log_file, self.user_name, "图像状态", "无异常")
+            record_log(self.log_file, self.user_name, "图像状态", "无异常", formatted_time)
             self.no_exception_count = 0  # 重置计数器以便新的计数开始
 
         if image_path not in self.processed_images:
             self.processed_images.append(image_path)
-            self.plot_window.update_plots(self.elongation_data, self.area_data, self.std2min_data, self.brightness_data)
+            self.plot_window.update_plots(self.elongation_data, self.area_data, self.std2min_data)
