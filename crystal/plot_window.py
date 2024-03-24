@@ -3,10 +3,11 @@ from pyqtgraph import PlotWidget, mkPen, InfiniteLine
 import pyqtgraph as pg
 from pyqtgraph.exporters import ImageExporter
 from PyQt5.QtGui import QColor, QFont
-
+import datetime
+import os
 
 class PlotWindowBase(QWidget):
-    def __init__(self, title, y_axis_label, fileNamePrefix="plot"):
+    def __init__(self, title, y_axis_label, fileNamePrefix="plot", start_time="2002-09-26_09-20-00"):
         super().__init__()
         self.plot_widget = PlotWidget()
         self.plot_widget.setTitle(title, size='10pt')
@@ -19,6 +20,9 @@ class PlotWindowBase(QWidget):
 
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.plot_widget)
+
+        #程序启动时时间
+        self.start_time = start_time
 
         #文件名前缀
         self.fileNamePrefix = fileNamePrefix 
@@ -54,7 +58,15 @@ class PlotWindowBase(QWidget):
         pass
 
     def savePlot(self):
-        fileName = f"{self.fileNamePrefix}_plot.png"  # 使用文件名前缀构建文件名
+        # 获取程序启动时间
+        start_time =self.start_time
+        # 定义文件夹名称为当前时间
+        folder_name = os.path.join("plots", start_time)
+        
+        if not os.path.exists(folder_name):
+            os.makedirs(folder_name)
+        
+        fileName = os.path.join(folder_name, f"{self.fileNamePrefix}_plot.png")
         
         exporter = ImageExporter(self.plot_widget.plotItem)
         self.plot_widget.clear()
@@ -65,8 +77,8 @@ class PlotWindowBase(QWidget):
         print(f"图表已保存为: {fileName}")
 
 class ElongationPlotWindow(PlotWindowBase):
-    def __init__(self):
-        super().__init__("近圆系数变化", "近圆系数", "elongation")
+    def __init__(self, start_time):
+        super().__init__("近圆系数变化", "近圆系数", "elongation", start_time)
         self.plot_widget.setYRange(-0.2, 0.3)
 
     def plot_all_data(self):
@@ -96,8 +108,8 @@ class ElongationPlotWindow(PlotWindowBase):
         self.plot_widget.addLegend(offset=(10, 10))
 
 class AreaPlotWindow(PlotWindowBase):
-    def __init__(self):
-        super().__init__("面积变化", "面积", "area")
+    def __init__(self, start_time):
+        super().__init__("面积变化", "面积", "area", start_time)
         self.plot_widget.setYRange(-1500, 2000)
 
     def plot_all_data(self):
@@ -129,8 +141,8 @@ class AreaPlotWindow(PlotWindowBase):
         self.plot_widget.addLegend(offset=(10, 10))
 
 class Std2minPlotWindow(PlotWindowBase):
-    def __init__(self):
-        super().__init__("标准差/最小值变化", "标准差/最小值", "std2min")
+    def __init__(self, start_time):
+        super().__init__("标准差/最小值变化", "标准差/最小值", "std2min", start_time)
         self.plot_widget.setYRange(-30, 30)
 
     def plot_all_data(self):
@@ -156,19 +168,18 @@ class Std2minPlotWindow(PlotWindowBase):
         self.plot_widget.addLegend(offset=(10, 10))
 
 class IntegratedPlotWindow(QWidget):
-    def __init__(self):
+    def __init__(self, start_time):
         super().__init__()
         self.setWindowTitle("综合图表分析")
         self.setGeometry(100, 100, 900, 600)
         # self.setMinimumSize(640, 480)
-
         # 创建标签页
         self.tabs = QTabWidget(self)
 
         # 添加各个图表到标签页
-        self.elongation_tab = ElongationPlotWindow()
-        self.area_tab = AreaPlotWindow()
-        self.std2min_tab = Std2minPlotWindow()
+        self.elongation_tab = ElongationPlotWindow(start_time = start_time)
+        self.area_tab = AreaPlotWindow(start_time = start_time)
+        self.std2min_tab = Std2minPlotWindow(start_time = start_time)
 
         self.tabs.addTab(self.elongation_tab, "近圆系数")
         self.tabs.addTab(self.area_tab, "面积")

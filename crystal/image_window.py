@@ -1,11 +1,12 @@
 import os
 import glob
 from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QSlider,
-                             QTextEdit, QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton,
+                             QTextEdit, QTextBrowser, QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton,
                              QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QFileDialog,
                              QSizePolicy, QSpacerItem, QComboBox, QDateTimeEdit, QListWidget)
 from PyQt5.QtGui import QPixmap, QFont, QBrush, QColor
-from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate
+from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate, QUrl
+from .plot_window import IntegratedPlotWindow
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, cut_image
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename, update_first_info, init_data_file, init_log_file, record_data, record_log
 import time
@@ -15,14 +16,18 @@ import uuid
 import numpy as np
 import csv
 import chardet
+import cv2
 
 system = platform.system()
 
 
 class ImageWindow(QMainWindow):
-    def __init__(self, plot_window, interval, image_coord, dark_rect):
+    def __init__(self, interval, image_coord, dark_rect):
         super().__init__()
-        self.plot_window = plot_window
+
+        #程序启动时间
+        self.start_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.plot_window = IntegratedPlotWindow(self.start_time)
         self.interval = interval
         self.image_coord = image_coord
         self.dark_rect = dark_rect
@@ -43,11 +48,15 @@ class ImageWindow(QMainWindow):
         # 无异常计数器
         self.no_exception_count = 0
 
+        # 标准图像路径初始化
+        self.std_img_path = os.path.join(os.getcwd(), 'imgs', 'standard.png')
+
         # 未被遮挡的图像初始化
-        self.not_blocked_img = r"imgs\1702705095.bmp"
+        self.not_blocked_img = self.std_img_path
+
 
         # 正在处理的图像变量，存储为图像而非路径，初始化为黑色图像
-        self.last_readable_img = np.zeros((480, 640, 3), dtype=np.uint8)
+        self.last_readable_img = cv2.imread(self.std_img_path)
 
         self.setWindowTitle("IBAD晶体生长过程分析系统")
         self.move(100, 100)
@@ -77,13 +86,15 @@ class ImageWindow(QMainWindow):
         set_sync_param_action = QAction('设置文件路径', self)
         set_sync_param_action.triggered.connect(self.load_images)
         settings_menu.addAction(set_sync_param_action)
-        set_compare_image_action = QAction('设置对比图片路径', self)
+        set_compare_image_action = QAction('设置对比图像路径', self)
         set_compare_image_action.triggered.connect(self.open_compare_settings_dialog)
         settings_menu.addAction(set_compare_image_action)
 
         user_guide_action = QAction('使用说明', self)
+        user_guide_action.triggered.connect(self.open_user_guide_dialog)
         help_menu.addAction(user_guide_action)
         about_action = QAction('关于', self)
+        about_action.triggered.connect(self.open_about_dialog)
         help_menu.addAction(about_action)
 
         viewStatisticsAction = QAction('查看统计', self)
@@ -175,9 +186,6 @@ class ImageWindow(QMainWindow):
 
         # 操作员名称初始化
         self.user_name = "admin"
-
-        #程序启动时间
-        self.start_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         # 数据表格文件初始化
         self.data_file = os.path.join(os.getcwd(), "params", (self.start_time + ".csv"))
@@ -589,6 +597,30 @@ class ImageWindow(QMainWindow):
         else:
             print("用户取消了选择")
 
+    def open_about_dialog(self):
+        QMessageBox.about(self, "关于", 
+                          """<b>IBAD晶体生长过程分析系统</b> v1.1.1.240324_beta<br>
+                          东部超导科技（苏州）有限公司<br>
+                          南京师范大学人工智能研究院<br>""")
+
+    def open_user_guide_dialog(self):
+        user_guide_dialog = QDialog(self)
+        user_guide_dialog.setWindowTitle("使用说明")
+        user_guide_dialog.resize(500, 600)
+
+        # 创建一个文本浏览器，用于显示使用说明
+        user_guide_text_browser = QTextBrowser(user_guide_dialog)
+        html_file_path = "user_guide.html"  
+        user_guide_text_browser.setSource(QUrl.fromLocalFile(html_file_path))
+        user_guide_text_browser.setOpenExternalLinks(True)  # 允许打开外部链接
+
+        # 创建布局并添加控件
+        layout = QVBoxLayout()
+        layout.addWidget(user_guide_text_browser)
+        user_guide_dialog.setLayout(layout)
+
+        user_guide_dialog.exec_()
+
     def parse_coordinate(self, text):
         """
         解析输入的单个坐标文本并转换为整数
@@ -644,6 +676,7 @@ class ImageWindow(QMainWindow):
         self.std2min_data = []
         self.processed_images = []
         self.current_index = -1
+        self.last_readable_img = ""
 
         # if self.images:
         self.recursion_id = uuid.uuid4()  # 开始新的图片加载时更新标识符

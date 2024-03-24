@@ -4,7 +4,6 @@ from PyQt5.QtWidgets import QApplication, QSplashScreen, QMainWindow
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
 from .image_window import ImageWindow
-from .plot_window import AreaPlotWindow, ElongationPlotWindow, Std2minPlotWindow, IntegratedPlotWindow
 import argparse
 import time
 import qdarkstyle
@@ -26,10 +25,10 @@ def run():
     # elongation_plot_window = ElongationPlotWindow()
     # std2min_plot_window = Std2minPlotWindow()
     # brightness_plot_window = BrightnessPlotWindow()
-    plot_window = IntegratedPlotWindow()
+    # plot_window = IntegratedPlotWindow()
     # hist_plot_window = HistPlotWindow()
 
-    image_window = ImageWindow(plot_window, args.interval, args.image_coord, args.dark_rect)
+    image_window = ImageWindow(args.interval, args.image_coord, args.dark_rect)
 
     app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
     # 创建并显示启动界面

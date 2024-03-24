@@ -15,8 +15,10 @@ def cut_image(image_path, image_area, last_readable_img):
     #如果读取图像出现错误，使用上一张正常读取的图像取代
     try:
         img = cv2.imread(image_path)
-        img = img[y1:y2, x1:x2]
-        img = cv2.resize(img, (640, 480))
+        height, width = img.shape[:2]
+        if (height, width) != (480, 640):
+            img = img[y1:y2, x1:x2]
+            img = cv2.resize(img, (640, 480))
     # except:
     #     time.sleep(3)
     #     img = cv2.imread(image_path)
@@ -91,6 +93,7 @@ def is_crystal_img(img):
     if distance < threshold:
         return True
     else:
+        # print("非晶体")
         return False
 
 
@@ -147,7 +150,7 @@ def detect_and_name_spots(bin_img, img):
                 elongation = max(l, s) / min(l, s)
                 area = cv2.contourArea(hull)
                 # print(area)
-                if area < 5000:
+                if area < 7000:
                     bright_spots_info[i] = {
                         "centroid": (ex, ey),
                         "area": area,
@@ -232,6 +235,9 @@ def spot_evaluation(image_path, info, area_data, elongation_data, std2min_data, 
         return False
 
     if len(info) < 3:
+        return "异常"
+
+    if area_data['bright_m'][-1] < 1000:
         return "异常"
 
     if std2min_data[-1] - std2min_data[0] < settings['std_min_lower_threshold']:
