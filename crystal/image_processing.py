@@ -67,34 +67,63 @@ def is_line_detected(img):
 #     # 返回是否检测到直线
 #     return lines is not None
 
-def is_crystal_img(img):
+# def is_crystal_img(img):
+#     '''
+#     通过卡方距离判断图像正常与否
+#     '''
+#     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+#     img = img.astype(np.float64) / 255.0
+
+#     std_img_path = os.path.join(os.getcwd(), 'imgs', 'standard.png') #标准图像路径
+#     std_img = cv2.imread(std_img_path)
+#     std_img = cv2.cvtColor(std_img, cv2.COLOR_BGR2GRAY)
+#     std_img = std_img.astype(np.float64) / 255.0
+
+#     threshold = 3 #卡方距离阈值
+
+#     cur_hist, _ = np.histogram(img, bins=256, range=(0, 1)) #当前图像直方图
+#     cur_hist = cur_hist.astype(np.float64)
+#     cur_hist = cur_hist / float(np.sum(cur_hist))
+#     std_hist, _ = np.histogram(std_img, bins=256, range=(0, 1)) #标准样本直方图
+#     std_hist = std_hist.astype(np.float64)
+#     std_hist = std_hist / float(np.sum(std_hist)) 
+
+#     distance, _ = chisquare(std_hist, cur_hist) #计算距离
+
+#     if distance < threshold:
+#         return True
+#     else:
+#         # print("非晶体")
+#         return False
+
+def is_crystal_img(image):
     '''
-    通过卡方距离判断图像正常与否
+    判断图像是否为晶体图像，即检查图像颜色是否主要是绿色。
     '''
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    img = img.astype(np.float64) / 255.0
+    # 分离图像的B, G, R通道
+    B, G, R = cv2.split(image)
 
-    std_img_path = os.path.join(os.getcwd(), 'imgs', 'standard.png') #标准图像路径
-    std_img = cv2.imread(std_img_path)
-    std_img = cv2.cvtColor(std_img, cv2.COLOR_BGR2GRAY)
-    std_img = std_img.astype(np.float64) / 255.0
+    # 找到红色或蓝色值大于绿色值的像素点
+    mask_non_crystal = np.logical_or(R > G + 10, B > G + 10)  # 允许10的容差
 
-    threshold = 3 #卡方距离阈值
+    # 找到不是接近黑色或白色的像素点
+    mask_not_bw = np.logical_and(np.max(image, axis=2) < 240, np.min(image, axis=2) > 15)
 
-    cur_hist, _ = np.histogram(img, bins=256, range=(0, 1)) #当前图像直方图
-    cur_hist = cur_hist.astype(np.float64)
-    cur_hist = cur_hist / float(np.sum(cur_hist))
-    std_hist, _ = np.histogram(std_img, bins=256, range=(0, 1)) #标准样本直方图
-    std_hist = std_hist.astype(np.float64)
-    std_hist = std_hist / float(np.sum(std_hist)) 
+    # 结合上述两个掩码，找出既不是晶体又不是接近黑/白色的像素点
+    mask = np.logical_and(mask_non_crystal, mask_not_bw)
 
-    distance, _ = chisquare(std_hist, cur_hist) #计算距离
+    # 计算非晶体像素点的数量
+    non_crystal_count = np.sum(mask)
 
-    if distance < threshold:
+    # 若非晶体像素点的数量超过阈值，则认为图像不是晶体图像
+    threshold = 10  # 可根据需要调整的阈值
+
+    if non_crystal_count < threshold:
         return True
     else:
-        # print("非晶体")
+        print("非晶体图像")
         return False
+
 
 
 def is_blocked(img):

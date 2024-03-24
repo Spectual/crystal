@@ -339,8 +339,10 @@ class ImageWindow(QMainWindow):
         main_layout.addWidget(update_settings_group)
         main_layout.addWidget(threshold_settings_group)
 
-        # 添加保存和取消按钮
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        # 添加自定义的保存和取消按钮
+        buttons = QDialogButtonBox()  
+        save_button = buttons.addButton("保存", QDialogButtonBox.AcceptRole)
+        cancel_button = buttons.addButton("取消", QDialogButtonBox.RejectRole)
         buttons.accepted.connect(dialog.accept)  # 点击保存时接受更改
         buttons.rejected.connect(dialog.reject)  # 点击取消时放弃更改
         main_layout.addWidget(buttons)
@@ -470,7 +472,7 @@ class ImageWindow(QMainWindow):
 
         # 根据选择的 CSV 文件更新类型下拉框
         selected_file_path = os.path.join(os.getcwd(), 'logs', selected_file)
-        with open(selected_file_path, newline='') as csvfile:
+        with open(selected_file_path, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             types = set()
             for row in reader:
