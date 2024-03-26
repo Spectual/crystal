@@ -78,7 +78,7 @@ class PlotWindowBase(QWidget):
 
 class ElongationPlotWindow(PlotWindowBase):
     def __init__(self, start_time):
-        super().__init__("近圆系数变化", "近圆系数", "elongation", start_time)
+        super().__init__("近圆系数变化", "近圆系数", "晶体状态", start_time)
         self.plot_widget.setYRange(-0.2, 0.3)
 
     def plot_all_data(self):
@@ -109,7 +109,7 @@ class ElongationPlotWindow(PlotWindowBase):
 
 class AreaPlotWindow(PlotWindowBase):
     def __init__(self, start_time):
-        super().__init__("面积变化", "面积", "area", start_time)
+        super().__init__("晶体状态变化", "晶体状态", "area", start_time)
         self.plot_widget.setYRange(-1500, 2000)
 
     def plot_all_data(self):
@@ -174,22 +174,23 @@ class IntegratedPlotWindow(QWidget):
         self.setGeometry(100, 100, 900, 600)
         # self.setMinimumSize(640, 480)
         # 创建标签页
-        self.tabs = QTabWidget(self)
+        # self.tabs = QTabWidget(self)
 
         # 添加各个图表到标签页
-        self.elongation_tab = ElongationPlotWindow(start_time = start_time)
+        # self.elongation_tab = ElongationPlotWindow(start_time = start_time)
         self.area_tab = AreaPlotWindow(start_time = start_time)
-        self.std2min_tab = Std2minPlotWindow(start_time = start_time)
+        # self.std2min_tab = Std2minPlotWindow(start_time = start_time)
 
-        self.tabs.addTab(self.elongation_tab, "近圆系数")
-        self.tabs.addTab(self.area_tab, "面积")
-        self.tabs.addTab(self.std2min_tab, "标准差")
+        # self.tabs.addTab(self.elongation_tab, "近圆系数")
+        # self.tabs.addTab(self.area_tab, "晶体状态")
+        # self.tabs.addTab(self.std2min_tab, "标准差")
 
         layout = QVBoxLayout(self)
-        layout.addWidget(self.tabs)
+        # layout.addWidget(self.tabs)
+        layout.addWidget(self.area_tab)
 
 
     def update_plots(self, elongation_data, area_data, std2min_data):
-        self.elongation_tab.update_plot(elongation_data)
+        # self.elongation_tab.update_plot(elongation_data)
         self.area_tab.update_plot(area_data)
-        self.std2min_tab.update_plot(std2min_data)
+        # self.std2min_tab.update_plot(std2min_data)

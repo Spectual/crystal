@@ -1,5 +1,6 @@
 import os
 import glob
+
 from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QSlider,
                              QTextEdit, QTextBrowser, QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton,
                              QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QFileDialog,
@@ -19,7 +20,6 @@ import chardet
 import cv2
 
 system = platform.system()
-
 
 class ImageWindow(QMainWindow):
     def __init__(self, interval, image_coord, dark_rect):
@@ -59,6 +59,7 @@ class ImageWindow(QMainWindow):
         self.last_readable_img = cv2.imread(self.std_img_path)
 
         self.setWindowTitle("IBAD晶体生长过程分析系统")
+        # self.setWindowTitle("RHEED晶体图像分析系统")
         self.move(100, 100)
 
         # 创建菜单栏和菜单项
@@ -114,21 +115,21 @@ class ImageWindow(QMainWindow):
             """)
 
         # 创建两列的表格
-        self.infoTextBox = QTableWidget(0, 2)  # 初始化为0行2列
-        self.infoTextBox.setHorizontalHeaderLabels(['时间', '提示'])
-        # self.infoTextBox.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.infoTextBox.setMinimumSize(200, 100)
-        self.infoTextBox.horizontalHeader().setDefaultAlignment(Qt.AlignCenter)
-        self.infoTextBox.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.infoTextBox.verticalHeader().hide()
+        self.infoTable = QTableWidget(0, 2)  # 初始化为0行2列
+        self.infoTable.setHorizontalHeaderLabels(['时间', '提示'])
+        # self.infoTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.infoTable.setMinimumSize(200, 100)
+        self.infoTable.horizontalHeader().setDefaultAlignment(Qt.AlignCenter)
+        self.infoTable.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.infoTable.verticalHeader().hide()
         font = QFont()
         font.setPointSize(20)
-        self.infoTextBox.setFont(font)
+        self.infoTable.setFont(font)
 
         # 使用 QSplitter 替换原来的 QHBoxLayout
         horizontal_splitter_top = QSplitter(Qt.Horizontal)
         horizontal_splitter_top.addWidget(self.imageLabel)
-        horizontal_splitter_top.addWidget(self.infoTextBox)
+        horizontal_splitter_top.addWidget(self.infoTable)
 
         # 按钮的垂直布局
         vertical_layout_buttons = QVBoxLayout()
@@ -536,36 +537,6 @@ class ImageWindow(QMainWindow):
                         display_text = f"{row['时间']} - {row['操作员']} - {row['类型']} - {row['拍摄时间']} - {row['信息']}"
                         self.resultsList.addItem(display_text)
 
-    def open_sync_settings_dialog(self):
-        # 打开文件同步设置对话框的逻辑
-        dialog = QDialog(self)
-        dialog.setWindowTitle("文件路径设置")
-        layout = QFormLayout()
-
-        self.read_path_input = QLineEdit(dialog)
-        # self.save_path_input = QLineEdit(dialog)
-
-        # 如果已有路径，预填充输入框
-        self.read_path_input.setText(self.current_folder if self.current_folder else "")
-        # self.save_path_input.setText(self.sync_save_path if self.sync_save_path else "")
-
-        layout.addRow("文件读取路径:", self.read_path_input)
-        # layout.addRow("同步文件保存路径:", self.save_path_input)
-
-        # 添加保存和取消按钮
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog)
-        buttons.accepted.connect(dialog.accept)
-        buttons.rejected.connect(dialog.reject)
-        layout.addWidget(buttons)
-
-        dialog.setLayout(layout)
-        result = dialog.exec_()
-
-        # 如果用户点击保存，则更新路径信息
-        if result == QDialog.Accepted:
-            self.current_folder = self.read_path_input.text()
-            # self.sync_save_path = self.save_path_input.text()
-
     def open_compare_settings_dialog(self):
         # 默认文件夹路径
         folder_path = self.current_folder
@@ -680,6 +651,8 @@ class ImageWindow(QMainWindow):
         self.current_index = -1
         self.last_readable_img = ""
 
+        self.infoTable.setRowCount(0)
+
         # if self.images:
         self.recursion_id = uuid.uuid4()  # 开始新的图片加载时更新标识符
         self.display_next_image(self.recursion_id)  # 传递当前标识符
@@ -727,12 +700,12 @@ class ImageWindow(QMainWindow):
             # self.show_image(new_image)
 
     def addRow(self, col1_data, col2_data, isException=True):
-        row_position = self.infoTextBox.rowCount()
-        self.infoTextBox.insertRow(row_position)
+        row_position = self.infoTable.rowCount()
+        self.infoTable.insertRow(row_position)
 
         # 根据字体大小设置行高
-        row_height = max(self.infoTextBox.fontMetrics().height() + 50, 20)  # 示例行高
-        self.infoTextBox.setRowHeight(row_position, row_height)
+        row_height = max(self.infoTable.fontMetrics().height() + 50, 20)  # 示例行高
+        self.infoTable.setRowHeight(row_position, row_height)
 
         # 创建 QTableWidgetItem 实例，并设置数据
         item1 = QTableWidgetItem(col1_data)
@@ -752,14 +725,14 @@ class ImageWindow(QMainWindow):
             item2.setForeground(greenBrush)
 
         # 将单元格项添加到表格
-        self.infoTextBox.setItem(row_position, 0, item1)
-        self.infoTextBox.setItem(row_position, 1, item2)
+        self.infoTable.setItem(row_position, 0, item1)
+        self.infoTable.setItem(row_position, 1, item2)
 
-        # self.infoTextBox.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-        # self.infoTextBox.horizontalHeader().setStretchLastSection(True)
+        # self.infoTable.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        # self.infoTable.horizontalHeader().setStretchLastSection(True)
 
         # 添加行后滚动到底部
-        self.infoTextBox.scrollToBottom()
+        self.infoTable.scrollToBottom()
 
     def show_image(self, image_path):
         # 展示处理后的图像
