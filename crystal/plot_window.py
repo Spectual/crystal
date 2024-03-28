@@ -76,6 +76,44 @@ class PlotWindowBase(QWidget):
 
         print(f"图表已保存为: {fileName}")
 
+class AreaPlotWindow(PlotWindowBase):
+    def __init__(self, start_time):
+        super().__init__("晶体状态变化", "晶体状态", "area", start_time)
+        self.plot_widget.setYRange(-1500, 2000)
+
+    def plot_all_data(self):
+        data_length = len(self.data_dict['bright_l'])
+        start_index = max(0, data_length - 30)
+        x = range(start_index, data_length)
+
+        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
+
+        for idx, (name, areas) in enumerate(self.data_dict.items()):
+            x = range(len(areas))
+            self.plot_widget.plot(x, [area - areas[0] for area in areas], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
+        
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
+
+    def plot_data(self):
+        data_length = len(self.data_dict['bright_l'])
+        start_index = max(0, data_length - 30)
+        x = range(start_index, data_length)
+
+        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
+        if len(self.data_dict['bright_l']) <= 30:
+            self.plot_widget.setXRange(0, 29, padding=0)
+
+        else:
+            self.plot_widget.setXRange(data_length-30, data_length-1)
+
+        for idx, (name, areas) in enumerate(self.data_dict.items()):
+            areas_last_30 = areas[-30:]
+            self.plot_widget.plot(x, [area - areas[0] for area in areas_last_30], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
+        
+        # 添加图例
+        self.plot_widget.addLegend(offset=(10, 10))
+
 class ElongationPlotWindow(PlotWindowBase):
     def __init__(self, start_time):
         super().__init__("近圆系数变化", "近圆系数", "晶体状态", start_time)
@@ -104,39 +142,6 @@ class ElongationPlotWindow(PlotWindowBase):
             elongations_last_30 = elongations[-30:]
             self.plot_widget.plot(x, [elong - elongations[0] for elong in elongations_last_30], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
 
-        # 添加图例
-        self.plot_widget.addLegend(offset=(10, 10))
-
-class AreaPlotWindow(PlotWindowBase):
-    def __init__(self, start_time):
-        super().__init__("晶体状态变化", "晶体状态", "area", start_time)
-        self.plot_widget.setYRange(-1500, 2000)
-
-    def plot_all_data(self):
-        data_length = len(self.data_dict['bright_l'])
-        start_index = max(0, data_length - 30)
-        x = range(start_index, data_length)
-
-        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
-
-        for idx, (name, areas) in enumerate(self.data_dict.items()):
-            x = range(len(areas))
-            self.plot_widget.plot(x, [area - areas[0] for area in areas], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
-        
-        # 添加图例
-        self.plot_widget.addLegend(offset=(10, 10))
-
-    def plot_data(self):
-        data_length = len(self.data_dict['bright_l'])
-        start_index = max(0, data_length - 30)
-        x = range(start_index, data_length)
-
-        name_zh_dic = {'bright_l': "左亮斑", 'bright_m': "中亮斑", 'bright_r': "右亮斑"}
-
-        for idx, (name, areas) in enumerate(self.data_dict.items()):
-            areas_last_30 = areas[-30:]
-            self.plot_widget.plot(x, [area - areas[0] for area in areas_last_30], pen=mkPen(self.colors[idx % len(self.colors)], width=5), symbol='o', symbolSize=5, name=name_zh_dic[name])
-        
         # 添加图例
         self.plot_widget.addLegend(offset=(10, 10))
 

@@ -1,12 +1,13 @@
 import os
 import glob
+import shutil
 
 from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QSlider,
                              QTextEdit, QTextBrowser, QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton,
                              QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QFileDialog,
                              QSizePolicy, QSpacerItem, QComboBox, QDateTimeEdit, QListWidget)
 from PyQt5.QtGui import QPixmap, QFont, QBrush, QColor
-from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate, QUrl
+from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate, QUrl, QThread, pyqtSignal
 from .plot_window import IntegratedPlotWindow
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, cut_image
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename, update_first_info, init_data_file, init_log_file, record_data, record_log
@@ -20,6 +21,7 @@ import chardet
 import cv2
 
 system = platform.system()
+deleted_files = set()
 
 class ImageWindow(QMainWindow):
     def __init__(self, interval, image_coord, dark_rect):
@@ -62,6 +64,9 @@ class ImageWindow(QMainWindow):
         # self.setWindowTitle("RHEED晶体图像分析系统")
         self.move(100, 100)
 
+        # 同步线程
+        self.sync_thread = None
+
         # 创建菜单栏和菜单项
         self.menu_bar = self.menuBar()
         # file_menu = self.menu_bar.addMenu('文件')
@@ -70,6 +75,7 @@ class ImageWindow(QMainWindow):
         settings_menu = self.menu_bar.addMenu('设置')
         help_menu = self.menu_bar.addMenu('帮助')
         statistic_menu = self.menu_bar.addMenu('统计')
+        import_menu = self.menu_bar.addMenu('同步')
 
         start_analysis_action = QAction('启动分析', self)
         start_analysis_action.triggered.connect(self.load_images)
@@ -101,6 +107,14 @@ class ImageWindow(QMainWindow):
         viewStatisticsAction = QAction('查看统计', self)
         viewStatisticsAction.triggered.connect(self.open_statistics_dialog)
         statistic_menu.addAction(viewStatisticsAction)
+
+        syncImagesAction = QAction('同步图像', self)
+        syncImagesAction.triggered.connect(self.open_sync_settings_dialog)
+        import_menu.addAction(syncImagesAction)
+
+        stopSyncAction = QAction('停止同步', self)
+        stopSyncAction.triggered.connect(self.stop_sync_images)
+        import_menu.addAction(stopSyncAction)
 
         self.imageLabel = QLabel(self)
         self.imageLabel.setScaledContents(False)
@@ -212,7 +226,7 @@ class ImageWindow(QMainWindow):
         self.timer.start(1000)
 
         self.sync_read_path = r"\\192.168.4.170\test"
-        self.sync_save_path = r"./data/test"
+        self.sync_save_path = r"data\test"
 
         record_log(self.log_file, self.user_name, "系统事件", "系统启动")
 
@@ -537,6 +551,96 @@ class ImageWindow(QMainWindow):
                         display_text = f"{row['时间']} - {row['操作员']} - {row['类型']} - {row['拍摄时间']} - {row['信息']}"
                         self.resultsList.addItem(display_text)
 
+    def open_sync_settings_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("导入文件路径设置")
+        layout = QFormLayout()
+
+        self.read_path_input = QLineEdit(dialog)
+        self.save_path_input = QLineEdit(dialog)
+        self.sync_interval_input = QLineEdit(dialog)  # 新增行：用户输入同步间隔
+
+        # 添加按钮用于打开文件选择器
+        read_path_button = QPushButton("选择路径", dialog)
+        save_path_button = QPushButton("选择路径", dialog)
+
+        # 设置按钮点击事件
+        read_path_button.clicked.connect(lambda: self.select_path(self.read_path_input))
+        save_path_button.clicked.connect(lambda: self.select_path(self.save_path_input))
+
+        self.read_path_input.setText(self.sync_read_path if self.sync_read_path else "")
+        self.save_path_input.setText(self.sync_save_path if self.sync_save_path else "")
+        self.sync_interval_input.setPlaceholderText("同步间隔（秒）")  # 设置占位符提示
+
+        layout.addRow("文件读取路径:", self.read_path_input)
+        layout.addWidget(read_path_button)  # 将按钮添加到布局
+        layout.addRow("同步文件保存路径:", self.save_path_input)
+        layout.addWidget(save_path_button)  # 将按钮添加到布局
+        layout.addRow("同步间隔（秒）:", self.sync_interval_input)  # 新增行：添加间隔输入字段
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, dialog)
+        buttons.accepted.connect(dialog.accept)
+        buttons.rejected.connect(dialog.reject)
+        layout.addWidget(buttons)
+
+        dialog.setLayout(layout)
+        result = dialog.exec_()
+
+        if result == QDialog.Accepted:
+            self.sync_read_path = self.read_path_input.text()  # 更新同步读取路径
+            self.sync_save_path = self.save_path_input.text()  # 更新同步保存路径
+            # 尝试将间隔转换为浮点数，如果失败则使用默认值1秒
+            try:
+                self.sync_interval = float(self.sync_interval_input.text())
+            except ValueError:
+                self.sync_interval = 1.0
+            # 启动复制进程
+            self.start_copy_images_process()
+
+    def update_status_bar_right(self, message):
+        if not hasattr(self, 'status_right_label'):
+            self.status_right_label = QLabel()
+            self.status_bar.addPermanentWidget(self.status_right_label)
+        self.status_right_label.setText(message)
+
+    def start_copy_images_process(self):
+        # 检查并终止已有的同步线程
+        if self.sync_thread and self.sync_thread.isRunning():
+            self.sync_thread.terminate()
+            self.sync_thread.wait()  # 等待线程完全终止
+
+        # 使用self.sync_interval作为间隔
+        self.sync_thread = CopyImagesThread(self.sync_read_path, self.sync_save_path, self.sync_interval)
+        self.sync_thread.update_signal.connect(self.update_status_bar_right)
+        self.sync_thread.start()
+
+    def continue_import_images(self):
+        if not self.sync_thread or not self.sync_thread.isRunning():
+            # 检查并终止已有的同步线程
+            if self.sync_thread and self.sync_thread.isRunning():
+                self.sync_thread.terminate()
+                self.sync_thread.wait()  # 等待线程完全终止
+
+            # 创建并启动新的同步线程，但这次只复制新图片
+            self.sync_thread = CopyImagesThread(self.sync_read_path, self.sync_save_path, self.sync_interval, only_new=True)
+            self.sync_thread.update_signal.connect(self.update_status_bar_right)
+            self.sync_thread.start()
+        else:
+            QMessageBox.information(self, "操作无效", "当前已有导入操作正在进行中。")
+
+    def stop_sync_images(self):
+        # 停止同步线程
+        if self.sync_thread and self.sync_thread.isRunning():
+            self.sync_thread.terminate()  # 或者使用更安全的停止方法，如果有的话
+            self.sync_thread.wait()  # 等待线程完全停止
+            self.update_status_bar_right("同步已停止")  # 更新状态栏信息
+
+    def select_path(self, line_edit):
+        # 打开文件选择对话框并将选择的路径设置到对应的输入框
+        directory = QFileDialog.getExistingDirectory(self, "选择路径")
+        if directory:  # 确保用户选择了路径
+            line_edit.setText(directory)
+
     def open_compare_settings_dialog(self):
         # 默认文件夹路径
         folder_path = self.current_folder
@@ -796,3 +900,42 @@ class ImageWindow(QMainWindow):
         if image_path not in self.processed_images:
             self.processed_images.append(image_path)
             self.plot_window.update_plots(self.elongation_data, self.area_data, self.std2min_data)
+
+
+
+class CopyImagesThread(QThread):
+    update_signal = pyqtSignal(str)  # 用于更新状态信息的信号
+
+    def __init__(self, source_folder, target_folder, interval, only_new=False):
+        super().__init__()
+        self.source_folder = source_folder
+        self.target_folder = target_folder
+        self.interval = interval
+        self.only_new = only_new
+
+    def run(self):
+        global deleted_files
+        while True:
+            image_files = get_image_files(self.source_folder)
+            for image_file in image_files:
+                target_file = os.path.join(self.target_folder, os.path.basename(image_file))
+                # 如果文件在已删除记录中，则跳过复制
+                if target_file in deleted_files or (self.only_new and os.path.exists(target_file)):
+                    continue
+                try:
+                    if not os.path.exists(target_file):
+                        shutil.copy2(image_file, target_file)
+                        self.update_signal.emit(f"文件 {os.path.basename(image_file)} 已被复制到 {self.target_folder}")
+
+                    else:
+                        # 如果文件已存在且不在已删除记录中，仍然跳过复制
+                        continue
+                    time.sleep(self.interval)
+                except Exception as e:  # 使用具体的异常类型替代通用的异常捕获
+                    self.update_signal.emit(f"复制文件 {image_file} 时发生错误: {e}")
+
+            # 检查目标文件夹，更新已删除文件记录
+            current_target_files = {os.path.join(self.target_folder, f) for f in os.listdir(self.target_folder) if
+                                    os.path.isfile(os.path.join(self.target_folder, f))}
+            source_files = {os.path.join(self.target_folder, os.path.basename(f)) for f in image_files}
+            deleted_files.update(deleted_files.union(source_files) - current_target_files)
