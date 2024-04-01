@@ -1,9 +1,11 @@
 import sys
 import platform
+from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QSplashScreen, QMainWindow
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtCore import Qt, QTimer
-from .image_window import ImageWindow
+# from .image_window import ImageWindow
+from .login_window import LoginWindow
 import argparse
 import time
 import qdarkstyle
@@ -28,7 +30,10 @@ def run():
     # plot_window = IntegratedPlotWindow()
     # hist_plot_window = HistPlotWindow()
 
-    image_window = ImageWindow(args.interval, args.image_coord, args.dark_rect)
+    login_window = LoginWindow()
+    #创建登录界面
+
+    # image_window = ImageWindow(args.interval, args.image_coord, args.dark_rect)
 
     app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
     # 创建并显示启动界面
@@ -51,10 +56,11 @@ def run():
     time.sleep(3)
 
     splash.close()
-    # plot_window.show()
-    image_window.showMaximized()
+
+    login_window.show()
 
     sys.exit(app.exec_())
+
 
 if __name__ == "__main__":
     run()

@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVB
                              QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QFileDialog,
                              QSizePolicy, QSpacerItem, QComboBox, QDateTimeEdit, QListWidget)
 from PyQt5.QtGui import QPixmap, QFont, QBrush, QColor
-from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate, QUrl, QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate, QUrl, QThread, pyqtSignal, QSettings
 from .plot_window import IntegratedPlotWindow
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, cut_image
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename, update_first_info, init_data_file, init_log_file, record_data, record_log
@@ -19,9 +19,12 @@ import numpy as np
 import csv
 import chardet
 import cv2
+import os
+
 
 system = platform.system()
 deleted_files = set()
+
 
 class ImageWindow(QMainWindow):
     def __init__(self, interval, image_coord, dark_rect):
@@ -33,6 +36,13 @@ class ImageWindow(QMainWindow):
         self.interval = interval
         self.image_coord = image_coord
         self.dark_rect = dark_rect
+
+        # 获取项目目录的路径
+        project_dir = os.path.dirname(os.path.abspath(__file__))
+        last_account_settings_path = os.path.join(project_dir, 'last_account.ini')
+        self.settings_last_account = QSettings(last_account_settings_path, QSettings.IniFormat)
+        last_used_username = self.settings_last_account.value('username')
+        # print(last_used_username)
 
         self.is_on = True
 
