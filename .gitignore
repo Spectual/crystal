@@ -10,3 +10,5 @@
 /logs/
 /params/
 /plots/
+/crystal/accounts.ini
+/crystal/last_account.ini

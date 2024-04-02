@@ -1,0 +1,14 @@
+{
+  "image_coord": [960, 145, 1430, 495],
+  "dark_rect": [204,60,534,134],
+  "interval": 1000,
+  "thresholds": {
+    "no_exception_count_threshold": 30,
+    "elongation_upper_threshold": 1,
+    "elongation_lower_threshold": 0,
+    "area_upper_threshold": 800,
+    "area_lower_threshold": -800,
+    "std_min_upper_threshold": 50,
+    "std_min_lower_threshold": -50
+  }
+}

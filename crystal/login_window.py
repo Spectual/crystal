@@ -16,8 +16,6 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=1000)
-parser.add_argument('-a', '--image-area', nargs=4, help='image coord', dest='image_coord', type=int, default=(960, 145, 1430, 495))
-parser.add_argument('-d', '--dark-rect', nargs=4, help='dark area coord', dest='dark_rect', type=int, default=(204,60,204+330,60+74))
 
 args = parser.parse_known_args()[0]
 
@@ -154,7 +152,7 @@ class LoginWindow(QWidget, Login_Window):
         self.exit_pushButton.clicked.connect(self.exit)
         self.is_true = False
 
-        self.image_window = ImageWindow(args.interval, args.image_coord, args.dark_rect)
+        self.image_window = ImageWindow(args.interval)
 
         # 获取项目目录的路径
         project_dir = os.path.dirname(os.path.abspath(__file__))

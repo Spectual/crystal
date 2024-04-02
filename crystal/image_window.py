@@ -1,7 +1,3 @@
-import os
-import glob
-import shutil
-
 from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QSlider,
                              QTextEdit, QTextBrowser, QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton,
                              QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QFileDialog,
@@ -11,13 +7,16 @@ from PyQt5.QtCore import Qt, QTimer, QSize, QEvent, QDateTime, QDate, QUrl, QThr
 from .plot_window import IntegratedPlotWindow
 from .image_processing import spot_detection, compute_std_min_ratio, spot_evaluation, cut_image
 from .utils import get_image_files, convert_image_for_display, update_info, timestamp_to_datetime, split_timestamp_from_filename, update_first_info, init_data_file, init_log_file, record_data, record_log
-import time
+import numpy as np
 import datetime
 import platform
-import uuid
-import numpy as np
-import csv
 import chardet
+import shutil
+import glob
+import time
+import uuid
+import json
+import csv
 import cv2
 import os
 
@@ -27,15 +26,12 @@ deleted_files = set()
 
 
 class ImageWindow(QMainWindow):
-    def __init__(self, interval, image_coord, dark_rect):
+    def __init__(self, interval):
         super().__init__()
 
         #程序启动时间
         self.start_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         self.plot_window = IntegratedPlotWindow(self.start_time)
-        self.interval = interval
-        self.image_coord = image_coord
-        self.dark_rect = dark_rect
 
         # 获取项目目录的路径
         project_dir = os.path.dirname(os.path.abspath(__file__))
@@ -220,16 +216,12 @@ class ImageWindow(QMainWindow):
         self.log_file = os.path.join(os.getcwd(), "logs", (self.start_time + ".csv"))
         init_log_file(self.log_file)
 
-        # 阈值参数
-        self.settings = {
-            'elongation_upper_threshold': 1.0,
-            'elongation_lower_threshold': 0.0,
-            'area_upper_threshold': 800,
-            'area_lower_threshold': -800,
-            'std_min_upper_threshold': 50,
-            'std_min_lower_threshold': -50,
-            'no_exception_count_threshold': 30
-        }
+        #参数初始化
+        settings = self.load_default_settings()
+        self.interval = settings["interval"]
+        self.image_coord = settings["image_coord"]
+        self.dark_rect = settings["dark_rect"]
+        self.thresholds = settings["thresholds"]
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.check_for_new_images)
@@ -244,9 +236,10 @@ class ImageWindow(QMainWindow):
         # 打开图表窗口
         self.plot_window.show()
 
-    # def show_info_dialog(self):
-    # 显示分析结果窗口
-    # QMessageBox.information(self, "分析结果", "这里显示分析结果。")
+    def load_default_settings(self):
+        with open('config.json', 'r') as file:
+            settings = json.load(file)
+            return settings
 
     def open_settings_dialog(self):
         dialog = QDialog(self)
@@ -289,67 +282,60 @@ class ImageWindow(QMainWindow):
 
         # 创建并添加阈值设置控件
         self.no_exception_count_threshold_widgets = self.create_threshold_slider(
-            default_value=30, value=self.settings['no_exception_count_threshold'], min_value=1, max_value=100,
+            default_value=30, value=self.thresholds['no_exception_count_threshold'], min_value=1, max_value=100,
             title="无异常提示阈值:", factor=1)
 
         self.elongation_upper_threshold_widgets = self.create_threshold_slider(
-            default_value=1, value=self.settings['elongation_upper_threshold'], min_value=0, max_value=2,
-            title="近圆系数 上阈值:", factor=20)
+            default_value=1, value=self.thresholds['elongation_upper_threshold'], min_value=0, max_value=2,
+            title="亮斑近圆系数 上阈值:", factor=20)
         
         self.elongation_lower_threshold_widgets = self.create_threshold_slider(
-            default_value=0, value=self.settings['elongation_lower_threshold'], min_value=-2, max_value=0,
-            title="近圆系数 下阈值:", factor=20)
+            default_value=0, value=self.thresholds['elongation_lower_threshold'], min_value=-2, max_value=0,
+            title="亮斑近圆系数 下阈值:", factor=20)
 
         self.area_upper_threshold_widgets = self.create_threshold_slider(
-            default_value=800, value=self.settings['area_upper_threshold'], min_value=0, max_value=3000,
-            title="面积 上阈值:")
+            default_value=800, value=self.thresholds['area_upper_threshold'], min_value=0, max_value=3000,
+            title="亮斑面积 上阈值:")
 
         self.area_lower_threshold_widgets = self.create_threshold_slider(
-            default_value=-800, value=self.settings['area_lower_threshold'], min_value=-3000, max_value=0,
-            title="面积 下阈值:")
+            default_value=-800, value=self.thresholds['area_lower_threshold'], min_value=-3000, max_value=0,
+            title="亮斑面积 下阈值:")
 
         self.std_min_upper_threshold_widgets = self.create_threshold_slider(
-            default_value=50, value=self.settings['std_min_upper_threshold'], min_value=0, max_value=200,
-            title="标准差 上阈值:")
+            default_value=50, value=self.thresholds['std_min_upper_threshold'], min_value=0, max_value=200,
+            title="暗斑色差 上阈值:")
 
         self.std_min_lower_threshold_widgets = self.create_threshold_slider(
-            default_value=-50, value=self.settings['std_min_lower_threshold'], min_value=-200, max_value=0,
-            title="标准差 下阈值:")
+            default_value=-50, value=self.thresholds['std_min_lower_threshold'], min_value=-200, max_value=0,
+            title="暗斑色差 下阈值:")
 
         threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[0], 0, 0)
         threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[1], 0, 1)
         threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[2], 0, 2)
-        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[3], 0, 3)
 
         threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[0], 1, 0)
         threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[1], 1, 1)
         threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[2], 1, 2)
-        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[3], 1, 3)
 
         threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[0], 2, 0)
         threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[1], 2, 1)
         threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[2], 2, 2)
-        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[3], 2, 3)
 
         threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[0], 3, 0)
         threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[1], 3, 1)
         threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[2], 3, 2)
-        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[3], 3, 3)
 
         threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[0], 4, 0)
         threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[1], 4, 1)
         threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[2], 4, 2)
-        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[3], 4, 3)
 
         threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[0], 5, 0)
         threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[1], 5, 1)
         threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[2], 5, 2)
-        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[3], 5, 3)
 
         threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[0], 6,0)
         threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[1], 6,1)
         threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[2], 6,2)
-        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[3], 6,3)
 
 
         # threshold_settings_layout.addWidget(self.elongation_upper_threshold_slider, 0, 1)
@@ -364,52 +350,57 @@ class ImageWindow(QMainWindow):
         main_layout.addWidget(update_settings_group)
         main_layout.addWidget(threshold_settings_group)
 
-        # 添加自定义的保存和取消按钮
-        buttons = QDialogButtonBox()  
+        # 添加自定义的保存、取消和恢复默认按钮
+        buttons = QDialogButtonBox()
         save_button = buttons.addButton("保存", QDialogButtonBox.AcceptRole)
         cancel_button = buttons.addButton("取消", QDialogButtonBox.RejectRole)
+        # 添加恢复默认按钮
+        reset_button = buttons.addButton("默认", QDialogButtonBox.ResetRole)
         buttons.accepted.connect(dialog.accept)  # 点击保存时接受更改
         buttons.rejected.connect(dialog.reject)  # 点击取消时放弃更改
+        # 点击恢复默认时的操作
+        reset_button.clicked.connect(self.reset_defaults)
         main_layout.addWidget(buttons)
 
         dialog.setLayout(main_layout)
         result = dialog.exec_()
 
-        # 如果用户点击保存，则更新坐标信息和阈值
         if result == QDialog.Accepted:
             self.update_settings_from_dialog()
 
     def create_threshold_slider(self, default_value, min_value, max_value, title, value=0, factor=1):
-
-        title = QLabel(title)
-
+        # 创建组件但不再包括默认按钮
+        title_label = QLabel(title)
         slider = QSlider(Qt.Horizontal)
         slider.setRange(min_value * factor, max_value * factor)
         slider.setValue(value * factor)
-        # slider.setSingleStep(step)
+        value_label = QLabel(str(value))
+        value_label.setMinimumWidth(60)
+        slider.valueChanged.connect(lambda value: value_label.setText(str(value / factor)))
+        return [title_label, slider, value_label] 
 
-        label = QLabel(str(value))
-        label.setMinimumWidth(60)
+    def reset_defaults(self):
+        settings = self.load_default_settings()
+        self.image_coord_x1.setText(str(settings["image_coord"][0]))
+        self.image_coord_y1.setText(str(settings["image_coord"][1]))
+        self.image_coord_x2.setText(str(settings["image_coord"][2]))
+        self.image_coord_y2.setText(str(settings["image_coord"][3]))
+        self.dark_rect_x1.setText(str(settings["dark_rect"][0]))
+        self.dark_rect_y1.setText(str(settings["dark_rect"][1]))
+        self.dark_rect_x2.setText(str(settings["dark_rect"][2]))
+        self.dark_rect_y2.setText(str(settings["dark_rect"][3]))
+        self.interval_t.setText(str(settings["interval"] / 1000))
 
-        # 更新标签显示滑动条的值
-        slider.valueChanged.connect(lambda value: label.setText(str(value / factor)))
+        # 设置阈值滑条的默认值
+        thresholds = settings["thresholds"]
+        self.elongation_upper_threshold_widgets[1].setValue(thresholds["elongation_upper_threshold"] * 20)
+        self.elongation_lower_threshold_widgets[1].setValue(thresholds["elongation_lower_threshold"] * 20)
+        self.area_upper_threshold_widgets[1].setValue(thresholds["area_upper_threshold"])
+        self.area_lower_threshold_widgets[1].setValue(thresholds["area_lower_threshold"])
+        self.std_min_upper_threshold_widgets[1].setValue(thresholds["std_min_upper_threshold"])
+        self.std_min_lower_threshold_widgets[1].setValue(thresholds["std_min_lower_threshold"])
+        self.no_exception_count_threshold_widgets[1].setValue(thresholds["no_exception_count_threshold"])
 
-        # 创建一个恢复默认值的按钮
-        reset_button = QPushButton("默认")  # 从设置中获取默认值，如果没有则使用当前值
-        reset_button.clicked.connect(lambda: slider.setValue(default_value * factor))
-
-        # 将滑动条、标签和按钮放入水平布局
-        # layout = QHBoxLayout()
-        # # layout.addWidget(QLabel(title))
-        # layout.addWidget(slider)
-        # layout.addWidget(label)
-        # layout.addWidget(reset_button)
-
-        # # 将布局包装在QWidget中
-        # widget = QWidget()
-        # widget.setLayout(layout)
-
-        return [title, slider, label, reset_button]
 
     def update_settings_from_dialog(self):
         # 更新图像坐标和暗斑区域坐标
@@ -420,14 +411,13 @@ class ImageWindow(QMainWindow):
                           int(self.dark_rect_y2.text()))
         self.interval = max(10, float(self.interval_t.text()) * 1000)
         # 更新阈值
-        self.settings['elongation_upper_threshold'] = self.elongation_upper_threshold_widgets[1].value() / 20
-        self.settings['elongation_lower_threshold'] = self.elongation_lower_threshold_widgets[1].value() / 20
-        self.settings['area_upper_threshold'] = self.area_upper_threshold_widgets[1].value()
-        self.settings['area_lower_threshold'] = self.area_lower_threshold_widgets[1].value()
-        self.settings['std_min_upper_threshold'] = self.std_min_upper_threshold_widgets[1].value()
-        self.settings['std_min_lower_threshold'] = self.std_min_lower_threshold_widgets[1].value()
-        self.settings['no_exception_count_threshold'] = self.no_exception_count_threshold_widgets[1].value()
-
+        self.thresholds['elongation_upper_threshold'] = self.elongation_upper_threshold_widgets[1].value() / 20
+        self.thresholds['elongation_lower_threshold'] = self.elongation_lower_threshold_widgets[1].value() / 20
+        self.thresholds['area_upper_threshold'] = self.area_upper_threshold_widgets[1].value()
+        self.thresholds['area_lower_threshold'] = self.area_lower_threshold_widgets[1].value()
+        self.thresholds['std_min_upper_threshold'] = self.std_min_upper_threshold_widgets[1].value()
+        self.thresholds['std_min_lower_threshold'] = self.std_min_lower_threshold_widgets[1].value()
+        self.thresholds['no_exception_count_threshold'] = self.no_exception_count_threshold_widgets[1].value()
 
     def open_statistics_dialog(self):
         dialog = QDialog(self)
@@ -891,7 +881,7 @@ class ImageWindow(QMainWindow):
 
         # 分析参数
         eval_result = spot_evaluation(image_path, info, self.area_data, self.elongation_data, self.std2min_data,
-                                      blocked, self.settings)
+                                      blocked, self.thresholds)
 
         # 参数记录
         if eval_result:
@@ -902,7 +892,7 @@ class ImageWindow(QMainWindow):
             self.no_exception_count += 1  # 未检测到异常，增加计数器
 
         # 如果连续多张图像都没有异常，提示无异常
-        if self.no_exception_count >= self.settings['no_exception_count_threshold']:
+        if self.no_exception_count >= self.thresholds['no_exception_count_threshold']:
             self.addRow(formatted_time, "无异常", isException=False)
             record_log(self.log_file, self.user_name, "图像状态", "无异常", formatted_time)
             self.no_exception_count = 0  # 重置计数器以便新的计数开始

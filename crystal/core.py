@@ -16,8 +16,6 @@ system = platform.system()
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-t', '--interval', help='time interval (second)', dest='interval', type=float, default=1000)
-parser.add_argument('-a', '--image-area', nargs=4, help='image coord', dest='image_coord', type=int, default=(960, 145, 1430, 495))
-parser.add_argument('-d', '--dark-rect', nargs=4, help='dark area coord', dest='dark_rect', type=int, default=(204,60,204+330,60+74))
 
 args = parser.parse_known_args()[0]
 
