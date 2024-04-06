@@ -132,7 +132,7 @@ class Login_Window(object):
 
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "Login"))
+        Form.setWindowTitle(_translate("Form", "登陆"))
         self.label.setText(_translate("Form", "IBAD晶体生长过程分析系统"))
         self.label_2.setText(_translate("Form", "用户:"))
         self.username_lineEdit.setPlaceholderText(_translate("Form", "请输入用户名"))
@@ -214,7 +214,7 @@ class LoginWindow(QWidget, Login_Window):
         if saved_password is not None and saved_password == password:
             # 将当前登录的账号保存到第二个配置文件以便下次自动填入账号
             self.settings_last_account.setValue('username', username)
-            QMessageBox.information(self, '登录成功', '登录成功！')
+            # QMessageBox.information(self, '登录成功', '登录成功！')
             self.is_true = True
             self.image_window.showMaximized()
             self.close()

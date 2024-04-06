@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QSlider,
+from PyQt5.QtWidgets import (QMainWindow, QAction, QGridLayout, QHBoxLayout, QVBoxLayout, QGroupBox, QLabel, QSlider, QRadioButton, QButtonGroup,
                              QTextEdit, QTextBrowser, QWidget, QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView, QPushButton,
                              QSplitter, QDialogButtonBox, QMessageBox, QDialog, QLineEdit, QFormLayout, QFileDialog,
                              QSizePolicy, QSpacerItem, QComboBox, QDateTimeEdit, QListWidget)
@@ -241,7 +241,7 @@ class ImageWindow(QMainWindow):
             settings = json.load(file)
             return settings
 
-    def open_settings_dialog(self):
+    def open_settings_dialog(self):   
         dialog = QDialog(self)
         dialog.setWindowTitle("设置参数")
         main_layout = QVBoxLayout(dialog)  # 主布局
@@ -280,67 +280,29 @@ class ImageWindow(QMainWindow):
         threshold_settings_group = QGroupBox("阈值设置")
         threshold_settings_layout = QGridLayout()
 
-        # 创建并添加阈值设置控件
-        self.no_exception_count_threshold_widgets = self.create_threshold_slider(
-            default_value=30, value=self.thresholds['no_exception_count_threshold'], min_value=1, max_value=100,
-            title="无异常提示阈值:", factor=1)
+        self.elongation_upper_threshold_widgets = self.create_threshold_radiobuttons("亮斑近圆系数 上阈值:", value=self.thresholds['elongation_upper_threshold_index'])
+        self.elongation_lower_threshold_widgets = self.create_threshold_radiobuttons("亮斑近圆系数 下阈值:", value=self.thresholds['elongation_lower_threshold_index'])
+        self.area_upper_threshold_widgets = self.create_threshold_radiobuttons("亮斑面积 上阈值:", value=self.thresholds['area_upper_threshold_index'])
+        self.area_lower_threshold_widgets = self.create_threshold_radiobuttons("亮斑面积 下阈值:", value=self.thresholds['area_lower_threshold_index'])
+        self.std_min_upper_threshold_widgets = self.create_threshold_radiobuttons("暗斑色差 上阈值:", value=self.thresholds['std_min_upper_threshold_index'])
+        self.std_min_lower_threshold_widgets = self.create_threshold_radiobuttons("暗斑色差 下阈值:", value=self.thresholds['std_min_lower_threshold_index'])
+        self.no_exception_count_threshold_widgets = self.create_threshold_radiobuttons("无异常提示阈值:", value=self.thresholds['no_exception_count_threshold_index'])
 
-        self.elongation_upper_threshold_widgets = self.create_threshold_slider(
-            default_value=1, value=self.thresholds['elongation_upper_threshold'], min_value=0, max_value=2,
-            title="亮斑近圆系数 上阈值:", factor=20)
-        
-        self.elongation_lower_threshold_widgets = self.create_threshold_slider(
-            default_value=0, value=self.thresholds['elongation_lower_threshold'], min_value=-2, max_value=0,
-            title="亮斑近圆系数 下阈值:", factor=20)
-
-        self.area_upper_threshold_widgets = self.create_threshold_slider(
-            default_value=800, value=self.thresholds['area_upper_threshold'], min_value=0, max_value=3000,
-            title="亮斑面积 上阈值:")
-
-        self.area_lower_threshold_widgets = self.create_threshold_slider(
-            default_value=-800, value=self.thresholds['area_lower_threshold'], min_value=-3000, max_value=0,
-            title="亮斑面积 下阈值:")
-
-        self.std_min_upper_threshold_widgets = self.create_threshold_slider(
-            default_value=50, value=self.thresholds['std_min_upper_threshold'], min_value=0, max_value=200,
-            title="暗斑色差 上阈值:")
-
-        self.std_min_lower_threshold_widgets = self.create_threshold_slider(
-            default_value=-50, value=self.thresholds['std_min_lower_threshold'], min_value=-200, max_value=0,
-            title="暗斑色差 下阈值:")
-
-        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[0], 0, 0)
-        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[1], 0, 1)
-        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[2], 0, 2)
-
-        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[0], 1, 0)
-        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[1], 1, 1)
-        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[2], 1, 2)
-
-        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[0], 2, 0)
-        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[1], 2, 1)
-        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[2], 2, 2)
-
-        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[0], 3, 0)
-        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[1], 3, 1)
-        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[2], 3, 2)
-
-        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[0], 4, 0)
-        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[1], 4, 1)
-        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[2], 4, 2)
-
-        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[0], 5, 0)
-        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[1], 5, 1)
-        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[2], 5, 2)
-
-        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[0], 6,0)
-        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[1], 6,1)
-        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[2], 6,2)
-
-
-        # threshold_settings_layout.addWidget(self.elongation_upper_threshold_slider, 0, 1)
-        # threshold_settings_layout.addWidget(upper_button, 0, 2)
-
+        # 布局添加单选按钮组
+        threshold_settings_layout.addWidget(self.elongation_upper_threshold_widgets[0], 0, 0, 1, 3)
+        threshold_settings_layout.addLayout(self.elongation_upper_threshold_widgets[1], 0, 3)
+        threshold_settings_layout.addWidget(self.elongation_lower_threshold_widgets[0], 1, 0, 1, 3)
+        threshold_settings_layout.addLayout(self.elongation_lower_threshold_widgets[1], 1, 3)
+        threshold_settings_layout.addWidget(self.area_upper_threshold_widgets[0], 2, 0, 1, 3)
+        threshold_settings_layout.addLayout(self.area_upper_threshold_widgets[1], 2, 3)
+        threshold_settings_layout.addWidget(self.area_lower_threshold_widgets[0], 3, 0, 1, 3)
+        threshold_settings_layout.addLayout(self.area_lower_threshold_widgets[1], 3, 3)
+        threshold_settings_layout.addWidget(self.std_min_upper_threshold_widgets[0], 4, 0, 1, 3)
+        threshold_settings_layout.addLayout(self.std_min_upper_threshold_widgets[1], 4, 3)
+        threshold_settings_layout.addWidget(self.std_min_lower_threshold_widgets[0], 5, 0, 1, 3)
+        threshold_settings_layout.addLayout(self.std_min_lower_threshold_widgets[1], 5, 3)
+        threshold_settings_layout.addWidget(self.no_exception_count_threshold_widgets[0], 6, 0, 1, 3)
+        threshold_settings_layout.addLayout(self.no_exception_count_threshold_widgets[1], 6, 3)
 
 
         threshold_settings_group.setLayout(threshold_settings_layout)
@@ -368,7 +330,30 @@ class ImageWindow(QMainWindow):
         if result == QDialog.Accepted:
             self.update_settings_from_dialog()
 
-    def create_threshold_slider(self, default_value, min_value, max_value, title, value=0, factor=1):
+    def create_threshold_radiobuttons(self, title, value):
+        title_label = QLabel(title)
+        layout = QHBoxLayout()
+        button_group = QButtonGroup(layout)  
+        low_button = QRadioButton("低")
+        medium_button = QRadioButton("中")
+        high_button = QRadioButton("高")
+        
+        layout.addWidget(low_button)
+        layout.addWidget(medium_button)
+        layout.addWidget(high_button)
+        
+        # 将按钮添加到按钮组，设置ID
+        button_group.addButton(low_button, 0)
+        button_group.addButton(medium_button, 1)
+        button_group.addButton(high_button, 2)
+        
+        # 连接信号和槽
+        # button_group.buttonClicked[int].connect(lambda value, key=setting_key: self.set_threshold_value(key, value))
+        button_group.button(value).setChecked(True)
+
+        return title_label, layout, button_group
+
+    def create_threshold_slider(self, min_value, max_value, title, value=0, factor=1):
         # 创建组件但不再包括默认按钮
         title_label = QLabel(title)
         slider = QSlider(Qt.Horizontal)
@@ -393,14 +378,13 @@ class ImageWindow(QMainWindow):
 
         # 设置阈值滑条的默认值
         thresholds = settings["thresholds"]
-        self.elongation_upper_threshold_widgets[1].setValue(thresholds["elongation_upper_threshold"] * 20)
-        self.elongation_lower_threshold_widgets[1].setValue(thresholds["elongation_lower_threshold"] * 20)
-        self.area_upper_threshold_widgets[1].setValue(thresholds["area_upper_threshold"])
-        self.area_lower_threshold_widgets[1].setValue(thresholds["area_lower_threshold"])
-        self.std_min_upper_threshold_widgets[1].setValue(thresholds["std_min_upper_threshold"])
-        self.std_min_lower_threshold_widgets[1].setValue(thresholds["std_min_lower_threshold"])
-        self.no_exception_count_threshold_widgets[1].setValue(thresholds["no_exception_count_threshold"])
-
+        self.elongation_upper_threshold_widgets[2].button(thresholds['elongation_upper_threshold_index']).setChecked(True)
+        self.elongation_lower_threshold_widgets[2].button(thresholds['elongation_lower_threshold_index']).setChecked(True)
+        self.area_upper_threshold_widgets[2].button(thresholds['area_upper_threshold_index']).setChecked(True)
+        self.area_lower_threshold_widgets[2].button(thresholds['area_lower_threshold_index']).setChecked(True)
+        self.std_min_upper_threshold_widgets[2].button(thresholds['std_min_upper_threshold_index']).setChecked(True)
+        self.std_min_lower_threshold_widgets[2].button(thresholds['std_min_lower_threshold_index']).setChecked(True)
+        self.no_exception_count_threshold_widgets[2].button(thresholds['no_exception_count_threshold_index']).setChecked(True)
 
     def update_settings_from_dialog(self):
         # 更新图像坐标和暗斑区域坐标
@@ -411,13 +395,21 @@ class ImageWindow(QMainWindow):
                           int(self.dark_rect_y2.text()))
         self.interval = max(10, float(self.interval_t.text()) * 1000)
         # 更新阈值
-        self.thresholds['elongation_upper_threshold'] = self.elongation_upper_threshold_widgets[1].value() / 20
-        self.thresholds['elongation_lower_threshold'] = self.elongation_lower_threshold_widgets[1].value() / 20
-        self.thresholds['area_upper_threshold'] = self.area_upper_threshold_widgets[1].value()
-        self.thresholds['area_lower_threshold'] = self.area_lower_threshold_widgets[1].value()
-        self.thresholds['std_min_upper_threshold'] = self.std_min_upper_threshold_widgets[1].value()
-        self.thresholds['std_min_lower_threshold'] = self.std_min_lower_threshold_widgets[1].value()
-        self.thresholds['no_exception_count_threshold'] = self.no_exception_count_threshold_widgets[1].value()
+        self.thresholds['elongation_upper_threshold_index'] = self.elongation_upper_threshold_widgets[2].checkedId()
+        self.thresholds['area_upper_threshold_index'] = self.area_upper_threshold_widgets[2].checkedId()
+        self.thresholds['std_min_upper_threshold_index'] = self.std_min_upper_threshold_widgets[2].checkedId()
+        self.thresholds['elongation_lower_threshold_index'] = self.elongation_lower_threshold_widgets[2].checkedId()
+        self.thresholds['area_lower_threshold_index'] = self.area_lower_threshold_widgets[2].checkedId()
+        self.thresholds['std_min_lower_threshold_index'] = self.std_min_lower_threshold_widgets[2].checkedId()
+        self.thresholds['no_exception_count_threshold_index'] = self.no_exception_count_threshold_widgets[2].checkedId()
+
+        self.thresholds['elongation_upper_threshold'] = self.thresholds['elongation_upper_threshold_list'][self.thresholds['elongation_upper_threshold_index']]
+        self.thresholds['area_upper_threshold'] = self.thresholds['area_upper_threshold_list'][self.thresholds['area_upper_threshold_index']]
+        self.thresholds['std_min_upper_threshold'] = self.thresholds['std_min_upper_threshold_list'][self.thresholds['std_min_upper_threshold_index']]
+        self.thresholds['elongation_lower_threshold'] = self.thresholds['elongation_lower_threshold_list'][self.thresholds['elongation_lower_threshold_index']]
+        self.thresholds['area_lower_threshold'] = self.thresholds['area_lower_threshold_list'][self.thresholds['area_lower_threshold_index']]
+        self.thresholds['std_min_lower_threshold'] = self.thresholds['std_min_lower_threshold_list'][self.thresholds['std_min_lower_threshold_index']]
+        self.thresholds['no_exception_count_threshold'] = self.thresholds['no_exception_count_threshold_list'][self.thresholds['no_exception_count_threshold_index']]
 
     def open_statistics_dialog(self):
         dialog = QDialog(self)

@@ -3,12 +3,26 @@
   "dark_rect": [204,60,534,134],
   "interval": 1000,
   "thresholds": {
+    "no_exception_count_threshold_list": [10, 30, 50],
+    "no_exception_count_threshold_index": 1,
     "no_exception_count_threshold": 30,
+    "elongation_upper_threshold_list": [0.2, 1, 2],
+    "elongation_upper_threshold_index": 1,
     "elongation_upper_threshold": 1,
-    "elongation_lower_threshold": 0,
+    "elongation_lower_threshold_list": [-2, -1, -0.2],
+    "elongation_lower_threshold_index": 1,
+    "elongation_lower_threshold": -1,
+    "area_upper_threshold_list": [100, 800, 2000],
+    "area_upper_threshold_index": 1,
     "area_upper_threshold": 800,
+    "area_lower_threshold_list": [-2000, -800, -100],
+    "area_lower_threshold_index": 1,
     "area_lower_threshold": -800,
+    "std_min_upper_threshold_list": [20, 50, 100],
+    "std_min_upper_threshold_index": 1,
     "std_min_upper_threshold": 50,
+    "std_min_lower_threshold_list": [-100, -50, -20],
+    "std_min_lower_threshold_index": 1,
     "std_min_lower_threshold": -50
   }
 }
