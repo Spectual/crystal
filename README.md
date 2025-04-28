@@ -6,10 +6,13 @@
 pip install -r requirements.txt
 ```
 
-## How do I use it?
+## How to run
 
 ```shell
-python run.py
+python run-gui.py
+
+# When applying in the factory, run the following script.
+python run-script.py
 ```
 
 ## Project Structure

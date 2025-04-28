@@ -132,15 +132,15 @@ class Login_Window(object):
 
     def retranslateUi(self, Form):
         _translate = QtCore.QCoreApplication.translate
-        Form.setWindowTitle(_translate("Form", "登陆"))
-        self.label.setText(_translate("Form", "IBAD晶体生长过程分析系统"))
-        self.label_2.setText(_translate("Form", "用户:"))
-        self.username_lineEdit.setPlaceholderText(_translate("Form", "请输入用户名"))
-        self.label_3.setText(_translate("Form", "密码:"))
-        self.password_lineEdit.setPlaceholderText(_translate("Form", "请输入密码"))
-        self.register_pushButton.setText(_translate("Form", "注册"))
-        self.login_pushButton.setText(_translate("Form", "登录"))
-        self.exit_pushButton.setText(_translate("Form", "退出"))
+        Form.setWindowTitle(_translate("Form", "Login"))
+        self.label.setText(_translate("Form", "IBAD Crystal Growth Process Analysis System"))
+        self.label_2.setText(_translate("Form", "Username:"))
+        self.username_lineEdit.setPlaceholderText(_translate("Form", "Please enter your username"))
+        self.label_3.setText(_translate("Form", "Password:"))
+        self.password_lineEdit.setPlaceholderText(_translate("Form", "Please enter your password"))
+        self.register_pushButton.setText(_translate("Form", "Register"))
+        self.login_pushButton.setText(_translate("Form", "Login"))
+        self.exit_pushButton.setText(_translate("Form", "Exit"))
 
 
 class LoginWindow(QWidget, Login_Window):
@@ -174,52 +174,52 @@ class LoginWindow(QWidget, Login_Window):
         if last_used_username:
             self.username_lineEdit.setText(last_used_username)
 
-    def register(self):     # 注册
+    def register(self):  # Register
         username = self.username_lineEdit.text()
         password = self.password_lineEdit.text()
 
         if not username:
-            QMessageBox.warning(self, '输入错误', '请填写用户名！')
+            QMessageBox.warning(self, 'Input Error', 'Please enter a username!')
             return
 
         if not password:
-            QMessageBox.warning(self, '输入错误', '请填写密码！')
+            QMessageBox.warning(self, 'Input Error', 'Please enter a password!')
             return
 
-        # 检查用户名是否已存在于配置文件中
+        # Check if the username already exists in the config file
         existing_username = self.settings_accounts.contains(username)
 
         if existing_username:
-            QMessageBox.warning(self, '用户名重复', '该用户名已经被注册，请选择其他用户名！')
+            QMessageBox.warning(self, 'Username Taken', 'This username is already registered. Please choose a different one!')
         else:
-            # 将新的用户名和密码对保存到配置文件中
+            # Save the new username and password pair to the config file
             self.settings_accounts.setValue(username, password)
-            QMessageBox.information(self, '注册成功', '注册成功！')
+            QMessageBox.information(self, 'Registration Successful', 'You have registered successfully!')
 
-    def login(self):        # 登陆
+    def login(self):  # Login
         username = self.username_lineEdit.text()
         password = self.password_lineEdit.text()
 
         if not username:
-            QMessageBox.warning(self, '输入错误', '请填写用户名！')
+            QMessageBox.warning(self, 'Input Error', 'Please enter a username!')
             return
 
         if not password:
-            QMessageBox.warning(self, '输入错误', '请填写密码！')
+            QMessageBox.warning(self, 'Input Error', 'Please enter a password!')
             return
 
         saved_password = self.settings_accounts.value(username)
 
-        # 在登录成功的地方设置该变量
+        # Set this variable when login is successful
         if saved_password is not None and saved_password == password:
-            # 将当前登录的账号保存到第二个配置文件以便下次自动填入账号
+            # Save the current logged-in username to another config file for auto-fill next time
             self.settings_last_account.setValue('username', username)
-            # QMessageBox.information(self, '登录成功', '登录成功！')
+            # QMessageBox.information(self, 'Login Successful', 'Login successful!')
             self.is_true = True
             self.image_window.showMaximized()
             self.close()
         else:
-            QMessageBox.warning(self, '登录失败', '用户名或密码错误，请重新输入！')
+            QMessageBox.warning(self, 'Login Failed', 'Incorrect username or password. Please try again!')
             return
 
     def exit(self):     # 清空

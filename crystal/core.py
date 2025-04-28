@@ -43,7 +43,7 @@ def run():
         splash_pix = QPixmap(r".\imgs\loading.png")
     splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
     splash.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-    splash.showMessage("加载中...", Qt.AlignBottom | Qt.AlignCenter, Qt.white)
+    splash.showMessage("loading...", Qt.AlignBottom | Qt.AlignCenter, Qt.white)
     splash.show()
 
     # 允许处理事件

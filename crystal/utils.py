@@ -5,34 +5,37 @@ import time
 import datetime
 import csv
 
-
 def split_timestamp_from_filename(image_filename):
-    '''
-    input: "123.png"
-    output: 123
-    '''
+    """
+    Extract timestamp from filename.
+    Example: input "123.png" -> output 123
+    """
     try:
         return int(os.path.splitext(image_filename)[0])
-
     except ValueError:
         return os.path.splitext(image_filename)[0]
 
-
 def timestamp_to_datetime(timestamp):
-    # 将时间戳转换为年月日时分秒
+    """
+    Convert timestamp to formatted datetime string.
+    """
     if not isinstance(timestamp, int):
         return timestamp
     date_time = time.localtime(timestamp)
     formatted_time = time.strftime("%Y-%m-%d %H:%M:%S", date_time)
     return formatted_time
 
-
 def convert_image_for_display(image):
+    """
+    Convert image to QPixmap for display.
+    """
     qim = QImage(image.tobytes('raw', 'RGB'), image.width, image.height, QImage.Format_RGB888)
     return QPixmap.fromImage(qim)
 
-
 def update_info(info, area_data, elongation_data):
+    """
+    Update area and elongation data based on detected bright spots.
+    """
     detected_spots = set(info.keys())
 
     for name in ['bright_l', 'bright_m', 'bright_r']:
@@ -43,9 +46,10 @@ def update_info(info, area_data, elongation_data):
             elongation_data[name].append(np.nan)
             area_data[name].append(np.nan)
 
-
 def update_first_info(info, area_data, elongation_data):
-    # 填入为第一个元素
+    """
+    Insert the first detected spot information at the beginning of the data lists.
+    """
     detected_spots = set(info.keys())
 
     for name in ['bright_l', 'bright_m', 'bright_r']:
@@ -56,8 +60,10 @@ def update_first_info(info, area_data, elongation_data):
             elongation_data[name].insert(0, np.nan)
             area_data[name].insert(0, np.nan)
 
-
 def get_image_files(folder_path):
+    """
+    Retrieve and sort image file paths from a folder.
+    """
     if not folder_path:
         return []
 
@@ -70,33 +76,35 @@ def get_image_files(folder_path):
 
     return images
 
-
 def init_data_file(data_file):
-    # 初始化表格
+    """
+    Initialize the data file with headers if it does not exist.
+    """
     if not os.path.exists(data_file):
         with open(data_file, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
             writer.writerow(
-                ['Timestamp', 'Datetime', 'Std2min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R',
-                 'Area_R'])
-
+                ['Timestamp', 'Datetime', 'Std2min', 'Elongation_L', 'Area_L', 'Elongation_M', 'Area_M', 'Elongation_R', 'Area_R']
+            )
 
 def init_log_file(log_file):
-    # Get the directory part of the log_file path
+    """
+    Initialize the log file with headers if it does not exist.
+    """
     log_dir = os.path.dirname(log_file)
 
-    # Check if the directory exists, and create it if it doesn't
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
-    # Then proceed to check if the log file itself exists and create it
     if not os.path.exists(log_file):
         with open(log_file, mode='w', newline='', encoding='utf-8') as file:
             writer = csv.writer(file)
-            writer.writerow(['时间', '操作员', '类型', '拍摄时间', '信息'])
-
+            writer.writerow(['Time', 'Operator', 'Log Level', 'Shot Time', 'Message'])
 
 def record_data(data_file, timestamp, datetime, std2min, info):
+    """
+    Record data extracted from an image into the data file.
+    """
     with open(data_file, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         data = [
@@ -112,8 +120,10 @@ def record_data(data_file, timestamp, datetime, std2min, info):
         ]
         writer.writerow(data)
 
-
 def record_log(log_file, operator, log_level, message, shot_time=""):
+    """
+    Record an operation or system log entry.
+    """
     with open(log_file, mode='a', newline='', encoding='utf-8') as file:
         writer = csv.writer(file)
         cur_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -125,7 +135,6 @@ def record_log(log_file, operator, log_level, message, shot_time=""):
             message
         ]
         writer.writerow(data)
-
 
 if __name__ == "__main__":
     print(get_image_files('./data'))
