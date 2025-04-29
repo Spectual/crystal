@@ -3,7 +3,12 @@
 ## Installation
 
 ```shell
+# Terminal
 pip install -r requirements.txt
+
+# Unix
+chmod +x install.sh
+./install.sh
 ```
 
 ## How to run
@@ -11,7 +16,7 @@ pip install -r requirements.txt
 ```shell
 python run-gui.py
 
-# When applying in the factory, run the following script.
+# When applying in the factory, run the following script to capture live screenshots of computer
 python run-script.py
 ```
 
@@ -35,3 +40,6 @@ crystal
 └── run-gui.py
 ```
 
+## User Guide
+
+See user guide in user_guide.html or you can view it in the app.
